@@ -79,7 +79,7 @@ version: '3.8'
 
 services:
   zaflix:
-    image: ghcr.io/<YOUR_GITHUB_USERNAME>/zaflix:latest
+    image: ghcr.io/fikrinasarudin/zaflix:latest
     container_name: zaflix-web
     ports:
       - "8080:80"
@@ -90,7 +90,3 @@ Run the container:
 ```bash
 docker compose up -d
 ```
-
-> [!NOTE]
-> Replace `<YOUR_GITHUB_USERNAME>` with your actual GitHub username. If your repository is private, you will need to run `docker login ghcr.io` first using a GitHub Personal Access Token (PAT) with read registry permissions.
-
