@@ -65,3 +65,32 @@ git remote add origin git@github.com:<YOUR_GITHUB_USERNAME>/zaflix.git
 # Push to GitHub
 git push -u origin main
 ```
+
+---
+
+## Homelab Deployment
+
+To deploy this application to your homelab using Docker Compose, you can pull the prebuilt image from the GitHub Container Registry (GHCR) rather than compiling the source code locally.
+
+Create a `docker-compose.yml` in your homelab deployment directory:
+
+```yaml
+version: '3.8'
+
+services:
+  zaflix:
+    image: ghcr.io/<YOUR_GITHUB_USERNAME>/zaflix:latest
+    container_name: zaflix-web
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+```
+
+Run the container:
+```bash
+docker compose up -d
+```
+
+> [!NOTE]
+> Replace `<YOUR_GITHUB_USERNAME>` with your actual GitHub username. If your repository is private, you will need to run `docker login ghcr.io` first using a GitHub Personal Access Token (PAT) with read registry permissions.
+
