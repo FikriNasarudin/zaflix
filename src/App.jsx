@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Hls from 'hls.js';
 import { 
   Play, 
   Info, 
@@ -80,6 +81,17 @@ const fetchWithCache = async (url, options = {}) => {
 
 // Override standard fetch with our cached version for this file
 const fetch = fetchWithCache;
+
+// Unique device ID for Jellyfin X-Emby-Authorization
+const getDeviceId = () => {
+  let id = localStorage.getItem('zaflix_device_id');
+  if (!id) {
+    id = 'zaflix-' + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('zaflix_device_id', id);
+  }
+  return id;
+};
+const deviceId = getDeviceId();
 
 export default function App() {
   // Connection config states
@@ -190,9 +202,11 @@ export default function App() {
   const [showControls, setShowControls] = useState(true);
   const [videoQuality, setVideoQuality] = useState('direct');
   const [selectedAudioIndex, setSelectedAudioIndex] = useState(null);
+  const [defaultAudioIndex, setDefaultAudioIndex] = useState(null);
   const [audioStreams, setAudioStreams] = useState([]);
   const [subtitleStreams, setSubtitleStreams] = useState([]);
   const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(null);
+  const [mediaSourceId, setMediaSourceId] = useState('');
   const [introMarker, setIntroMarker] = useState(null); // { start, end }
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [aspectRatio, setAspectRatio] = useState('contain');
@@ -211,6 +225,7 @@ export default function App() {
   const controlsTimeoutRef = useRef(null);
   const seekTargetTimeRef = useRef(0);
   const durationRef = useRef(0);
+  const lastPlayheadTimeRef = useRef(0);
   const [hoverTime, setHoverTime] = useState(null);
   const [hoverX, setHoverX] = useState(0);
   const [hoverImageSrc, setHoverImageSrc] = useState('');
@@ -285,7 +300,7 @@ export default function App() {
   const getHeaders = () => {
     return {
       'Content-Type': 'application/json',
-      'X-Emby-Authorization': `MediaBrowser Client="Zaflix", Device="Web", DeviceId="zaflix-web-client", Version="0.1.0", Token="${token}"`
+      'X-Emby-Authorization': `MediaBrowser Client="MyAntigravityPlayer", Device="WebBrowser", DeviceId="${deviceId}", Version="1.0.0", Token="${token}"`
     };
   };
 
@@ -473,7 +488,7 @@ export default function App() {
       try {
         const res = await fetch(`${cleanUrl}/Users/${formUserId}`, {
           headers: {
-            'X-Emby-Authorization': `MediaBrowser Client="Zaflix", Device="Web", DeviceId="zaflix-web-client", Version="0.1.0", Token="${formToken}"`
+            'X-Emby-Authorization': `MediaBrowser Client="MyAntigravityPlayer", Device="WebBrowser", DeviceId="${deviceId}", Version="1.0.0", Token="${formToken}"`
           }
         });
         if (!res.ok) throw new Error('Failed to fetch user. Check Server URL / Token.');
@@ -500,7 +515,7 @@ export default function App() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Emby-Authorization': 'MediaBrowser Client="Zaflix", Device="Web", DeviceId="zaflix-web-client", Version="0.1.0"'
+            'X-Emby-Authorization': `MediaBrowser Client="MyAntigravityPlayer", Device="WebBrowser", DeviceId="${deviceId}", Version="1.0.0"`
           },
           body: JSON.stringify({
             Username: formUsername.trim(),
@@ -1495,6 +1510,12 @@ export default function App() {
 
   // Launch direct media streaming
   const handlePlayMedia = (mediaId, title, subtitle, isEpisode = false, episodesList = [], currentIndex = 0, durationTicks = null, startPositionTicks = 0) => {
+    setSelectedAudioIndex(null);
+    setDefaultAudioIndex(null);
+    setSelectedSubtitleIndex(null);
+    setMediaSourceId('');
+    setAudioStreams([]);
+    setSubtitleStreams([]);
     setActivePlayback({
       id: mediaId,
       title,
@@ -1507,6 +1528,7 @@ export default function App() {
     const startSecs = startPositionTicks ? (startPositionTicks / 10000000) : 0;
     setCurrentTime(startSecs);
     seekTargetTimeRef.current = startSecs;
+    lastPlayheadTimeRef.current = startSecs;
     if (durationTicks) {
       const secs = durationTicks / 10000000;
       setDuration(secs);
@@ -1543,7 +1565,12 @@ export default function App() {
     const video = videoRef.current;
     if (!video) return;
 
-    const onTimeUpdate = () => setCurrentTime(video.currentTime);
+    const onTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+      if (video.currentTime > 0 && video.readyState > 0) {
+        lastPlayheadTimeRef.current = video.currentTime;
+      }
+    };
     const onDurationChange = () => {
       if (durationRef.current === 0 && video.duration) {
         setDuration(video.duration);
@@ -1598,6 +1625,7 @@ export default function App() {
           const mediaSource = data.MediaSources?.[0];
           if (mediaSource) {
             const streams = mediaSource.MediaStreams || [];
+            setMediaSourceId(mediaSource.Id);
             
             const audios = streams.filter(s => s.Type === 'Audio');
             const subtitles = streams.filter(s => s.Type === 'Subtitle');
@@ -1607,8 +1635,11 @@ export default function App() {
             
             // Set default audio index
             const defaultAudio = audios.find(s => s.IsDefault) || audios[0];
-            if (defaultAudio && selectedAudioIndex === null) {
-              setSelectedAudioIndex(defaultAudio.Index);
+            if (defaultAudio) {
+              setDefaultAudioIndex(defaultAudio.Index);
+              if (selectedAudioIndex === null) {
+                setSelectedAudioIndex(defaultAudio.Index);
+              }
             }
           }
         }
@@ -1632,41 +1663,96 @@ export default function App() {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    for (let i = 0; i < video.textTracks.length; i++) {
-      video.textTracks[i].mode = 'showing';
-    }
+
+    const syncSubtitles = () => {
+      const tracks = video.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        tracks[i].mode = selectedSubtitleIndex === null ? 'disabled' : 'showing';
+      }
+    };
+
+    syncSubtitles();
+    video.textTracks.addEventListener('addtrack', syncSubtitles);
+    return () => {
+      video.textTracks.removeEventListener('addtrack', syncSubtitles);
+    };
   }, [selectedSubtitleIndex]);
 
-  // Set up Direct Play or Low Resolution streaming URL
+  // Set up HLS Video streaming URL and initialize Hls.js player
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activePlayback) return;
 
-    let streamUrl = '';
-    if (videoQuality === 'direct') {
-      streamUrl = `${serverUrl}/Videos/${activePlayback.id}/stream?static=true&api_key=${token}`;
-    } else {
-      // progressive MP4 transcoding to 480p (low resolution)
-      streamUrl = `${serverUrl}/Videos/${activePlayback.id}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=854&maxHeight=480&VideoBitrate=800000&api_key=${token}`;
-    }
+    // Generate a unique session ID for this segment transcoding request to force fresh generation
+    const playSessionId = 'zaflix-session-' + Math.random().toString(36).substring(2, 11);
+
+    let streamUrl = `${serverUrl}/Videos/${activePlayback.id}/live.m3u8?Static=false&PlayMethod=DirectStream&VideoCodec=h264&videoCodec=h264&AudioCodec=aac&audioCodec=aac&AudioChannels=2&audioChannels=2&Container=ts,mp4,m4v&SegmentContainer=ts&TranscodingProtocols=hls&EnableDirectStream=true&EnableDirectPlay=false&TranscodeReasons=AudioCodecNotSupported&PlaySessionId=${playSessionId}&api_key=${token}`;
 
     if (selectedAudioIndex !== null) {
       streamUrl += `&AudioStreamIndex=${selectedAudioIndex}`;
     }
 
-    // Save current time position to resume playback correctly when switching quality
-    const prevTime = video.currentTime;
-    video.src = streamUrl;
+    // Save current time position to resume playback correctly when switching quality/audio
+    const prevTime = lastPlayheadTimeRef.current;
+    console.log("Zaflix Debug: Audio switched. prevTime:", prevTime, "lastPlayheadTimeRef:", lastPlayheadTimeRef.current, "video.currentTime:", video.currentTime);
+    let hlsInstance = null;
 
     const restoreTime = () => {
       if (prevTime > 0) {
         video.currentTime = prevTime;
       }
-      video.play().catch(e => console.log('Playback start prevented', e));
+      video.play().catch(e => console.log('Playback start prevented/failed', e));
       video.removeEventListener('loadedmetadata', restoreTime);
     };
+
     video.addEventListener('loadedmetadata', restoreTime);
-  }, [activePlayback, videoQuality, selectedAudioIndex, serverUrl, token]);
+
+    if (Hls.isSupported()) {
+      hlsInstance = new Hls({
+        maxBufferLength: 30,             // seconds of buffer ahead
+        maxMaxBufferLength: 600,         // seconds max buffer
+        maxBufferSize: 100 * 1000 * 1000, // 100MB max buffer size
+        backBufferLength: 30,            // seconds to keep in back buffer
+      });
+
+      hlsInstance.loadSource(streamUrl);
+      hlsInstance.attachMedia(video);
+
+      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(e => console.log('Playback start prevented', e));
+      });
+
+      hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+        console.error('HLS error:', data);
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hlsInstance.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hlsInstance.recoverMediaError();
+              break;
+            default:
+              // Cannot recover, destroy and fallback to direct src
+              hlsInstance.destroy();
+              hlsInstance = null;
+              video.src = streamUrl;
+              break;
+          }
+        }
+      });
+    } else {
+      // Native HLS support (Safari/iOS) or MSE fallback
+      video.src = streamUrl;
+    }
+
+    return () => {
+      video.removeEventListener('loadedmetadata', restoreTime);
+      if (hlsInstance) {
+        hlsInstance.destroy();
+      }
+    };
+  }, [activePlayback, videoQuality, selectedAudioIndex, defaultAudioIndex, serverUrl, token]);
 
   const handleProgressBarMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -1814,6 +1900,7 @@ export default function App() {
     if (!videoRef.current) return;
     const time = videoRef.current.currentTime;
     seekTargetTimeRef.current = time;
+    lastPlayheadTimeRef.current = time;
     setVideoQuality(quality);
   };
 
@@ -4270,15 +4357,21 @@ export default function App() {
                   }
                 }}
                 muted={isMuted}
+                crossOrigin="anonymous"
               >
                 {selectedSubtitleIndex !== null && (
                   <track
-                    key={selectedSubtitleIndex}
+                    key={`${selectedSubtitleIndex}-${selectedAudioIndex}-${videoQuality}`}
                     kind="subtitles"
-                    src={`${serverUrl}/Videos/${activePlayback.id}/Subtitles/${selectedSubtitleIndex}/0/Stream.vtt?api_key=${token}`}
+                    src={`${serverUrl}/Videos/${activePlayback.id}/${mediaSourceId || '0'}/Subtitles/${selectedSubtitleIndex}/Stream.vtt?api_key=${token}`}
                     srcLang="en"
                     label="Selected Subtitle"
                     default
+                    onLoad={(e) => {
+                      if (e.target.track) {
+                        e.target.track.mode = 'showing';
+                      }
+                    }}
                   />
                 )}
               </video>
@@ -4507,7 +4600,12 @@ export default function App() {
                                   <div 
                                     key={stream.Index} 
                                     className={`track-option ${selectedAudioIndex === stream.Index ? 'active' : ''}`}
-                                    onClick={() => setSelectedAudioIndex(stream.Index)}
+                                    onClick={() => {
+                                      if (videoRef.current) {
+                                        lastPlayheadTimeRef.current = videoRef.current.currentTime;
+                                      }
+                                      setSelectedAudioIndex(stream.Index);
+                                    }}
                                   >
                                     {stream.DisplayTitle || stream.Language || `Track ${stream.Index}`}
                                   </div>
