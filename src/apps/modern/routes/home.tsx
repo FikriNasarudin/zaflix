@@ -17,6 +17,9 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CloseIcon from '@mui/icons-material/Close';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 
 import '../../../elements/emby-tabs/emby-tabs';
 import '../../../elements/emby-button/emby-button';
@@ -57,13 +60,14 @@ const useMediaQuery = () => {
 };
 
 /* ==========================================================================
-   Zaflix Video/Photo Billboard Slideshow Component (Optimized)
+   Zaflix Video/Photo Billboard Slideshow Component with Clip Playback
    ========================================================================== */
 const Billboard = () => {
     const { __legacyApiClient__: apiClient, user } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
     const [items, setItems] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [playClip, setPlayClip] = useState(false);
 
     useEffect(() => {
         if (!apiClient || !user || !user.Id) return;
@@ -84,18 +88,34 @@ const Billboard = () => {
         });
     }, [apiClient, user]);
 
+    // Slideshow transition and video start timer
     useEffect(() => {
         if (items.length === 0) return;
-        const timer = setInterval(() => {
+        
+        setPlayClip(false);
+        const delayTimer = setTimeout(() => {
+            setPlayClip(true);
+        }, 3000); // Start playing video clip after 3 seconds on a slide
+
+        const slideTimer = setInterval(() => {
             setCurrentIndex((prev) => (prev + 1) % items.length);
-        }, 12000);
-        return () => clearInterval(timer);
-    }, [items]);
+        }, 22000); // Move to next slide after 22 seconds
+
+        return () => {
+            clearTimeout(delayTimer);
+            clearInterval(slideTimer);
+        };
+    }, [currentIndex, items]);
 
     if (!items || items.length === 0) return null;
 
     const currentItem = items[currentIndex];
     const backdropUrl = apiClient ? apiClient.getUrl(`Items/${currentItem.Id}/Images/Backdrop/0?quality=90`) : '';
+    
+    // Construct Direct H264 preview stream URL
+    const streamUrl = apiClient 
+        ? apiClient.getUrl(`Videos/${currentItem.Id}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=1280&maxHeight=720&VideoBitrate=1200000&api_key=${apiClient.accessToken()}`)
+        : '';
 
     const handlePlay = () => {
         if (!apiClient) return;
@@ -107,10 +127,10 @@ const Billboard = () => {
 
     const handleInfo = () => {
         if (!apiClient) return;
-        Dashboard.navigate(`details?id=${currentItem.Id}&serverId=${apiClient.serverId()}`);
+        // Open details modal
+        Events.trigger(document, 'open-zaflix-details', [currentItem]);
     };
 
-    // Responsive Sizes
     const billboardHeight = isMobile ? '230px' : isTablet ? '350px' : '480px';
     const titleSize = isMobile ? '1.5rem' : isTablet ? '2.0rem' : '2.6rem';
 
@@ -130,6 +150,7 @@ const Billboard = () => {
                 transition: 'height 0.3s ease'
             }}
         >
+            {/* Backdrop Image */}
             <div style={{
                 position: 'absolute',
                 top: 0,
@@ -139,9 +160,32 @@ const Billboard = () => {
                 backgroundImage: `url(${backdropUrl})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center 20%',
-                opacity: 0.6,
-                transition: 'background-image 0.8s ease'
+                opacity: playClip ? 0 : 0.6,
+                transition: 'opacity 1s ease, background-image 0.8s ease',
+                zIndex: 1
             }} />
+
+            {/* Video Clip Playback */}
+            {playClip && !isMobile && (
+                <video 
+                    src={streamUrl}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        opacity: 0.65,
+                        transition: 'opacity 1s ease',
+                        zIndex: 1
+                    }}
+                />
+            )}
             
             <div style={{
                 position: 'absolute',
@@ -149,7 +193,8 @@ const Billboard = () => {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'linear-gradient(to right, rgba(10, 6, 20, 0.95) 0%, rgba(10, 6, 20, 0.7) 50%, rgba(10, 6, 20, 0) 100%)'
+                background: 'linear-gradient(to right, rgba(10, 6, 20, 0.95) 0%, rgba(10, 6, 20, 0.7) 50%, rgba(10, 6, 20, 0) 100%)',
+                zIndex: 2
             }} />
             <div style={{
                 position: 'absolute',
@@ -157,7 +202,8 @@ const Billboard = () => {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'linear-gradient(to top, rgba(10, 6, 20, 1) 0%, rgba(10, 6, 20, 0.2) 60%, rgba(10, 6, 20, 0) 100%)'
+                background: 'linear-gradient(to top, rgba(10, 6, 20, 1) 0%, rgba(10, 6, 20, 0.2) 60%, rgba(10, 6, 20, 0) 100%)',
+                zIndex: 2
             }} />
 
             <div style={{
@@ -166,7 +212,7 @@ const Billboard = () => {
                 left: '5%',
                 width: '90%',
                 maxWidth: '650px',
-                zIndex: 2,
+                zIndex: 3,
                 color: '#fff',
                 display: 'flex',
                 flexDirection: 'column',
@@ -251,12 +297,11 @@ const Billboard = () => {
                             gap: '6px'
                         }}
                     >
-                        <InfoOutlinedIcon fontSize="small" /> Info
+                        <InfoOutlinedIcon fontSize="small" /> More Info
                     </button>
                 </div>
             </div>
 
-            {/* Slider arrows - hide on mobile */}
             {!isMobile && (
                 <>
                     <button 
@@ -276,7 +321,7 @@ const Billboard = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            zIndex: 2
+                            zIndex: 3
                         }}
                     >
                         <ChevronLeftIcon />
@@ -298,7 +343,7 @@ const Billboard = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            zIndex: 2
+                            zIndex: 3
                         }}
                     >
                         <ChevronRightIcon />
@@ -390,7 +435,7 @@ const NetworkSelector = () => {
 };
 
 /* ==========================================================================
-   Zaflix Media Row Carousel Component (Optimized & Responsive)
+   Zaflix Media Row Carousel Component with Landscape Backdrops
    ========================================================================== */
 interface MediaRowProps {
     title: string;
@@ -428,8 +473,8 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
 
     if (items.length === 0) return null;
 
-    // Responsive Card Sizing
-    const cardWidth = isMobile ? '105px' : isTablet ? '135px' : '160px';
+    // Use 16:9 Landscape Aspect Ratio Card Widths (from user screenshots)
+    const cardWidth = isMobile ? '160px' : isTablet ? '220px' : '260px';
 
     return (
         <div style={{ marginBottom: '30px', position: 'relative', textAlign: 'left' }}>
@@ -443,32 +488,29 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
             }}>{title}</h2>
             
             <div style={{ position: 'relative', width: '100%' }}>
-                {/* Scroll buttons - hide on mobile touch screens */}
                 {!isMobile && (
-                    <>
-                        <button 
-                            onClick={() => scroll('left')}
-                            style={{
-                                position: 'absolute',
-                                left: '-10px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                background: 'rgba(10, 6, 20, 0.75)',
-                                border: '1px solid rgba(211, 82, 255, 0.3)',
-                                color: '#fff',
-                                borderRadius: '50%',
-                                width: '32px',
-                                height: '32px',
-                                cursor: 'pointer',
-                                zIndex: 3,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        >
-                            <ChevronLeftIcon fontSize="small" />
-                        </button>
-                    </>
+                    <button 
+                        onClick={() => scroll('left')}
+                        style={{
+                            position: 'absolute',
+                            left: '-10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(10, 6, 20, 0.75)',
+                            border: '1px solid rgba(211, 82, 255, 0.3)',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            cursor: 'pointer',
+                            zIndex: 3,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <ChevronLeftIcon fontSize="small" />
+                    </button>
                 )}
 
                 <div 
@@ -485,11 +527,16 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
                     }}
                 >
                     {items.map((item) => {
-                        const posterUrl = apiClient ? apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`) : '';
+                        // Fetch Backdrop image for Landscape layout, fallback to Primary
+                        const imageUrl = apiClient 
+                            ? (item.BackdropImageTags && item.BackdropImageTags.length > 0
+                                ? apiClient.getUrl(`Items/${item.Id}/Images/Backdrop/0?quality=90`)
+                                : apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`))
+                            : '';
                         
                         const handleItemClick = () => {
-                            if (!apiClient) return;
-                            Dashboard.navigate(`details?id=${item.Id}&serverId=${apiClient.serverId()}`);
+                            // Trigger Details modal overlay
+                            Events.trigger(document, 'open-zaflix-details', [item]);
                         };
 
                         return (
@@ -512,7 +559,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
                                 <div style={{
                                     position: 'relative',
                                     width: '100%',
-                                    paddingTop: '150%', // 2:3 poster aspect ratio
+                                    paddingTop: '56.25%', // 16:9 Aspect Ratio
                                     borderRadius: '8px',
                                     overflow: 'hidden',
                                     border: '1px solid rgba(211, 82, 255, 0.15)',
@@ -525,7 +572,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
                                         left: 0,
                                         right: 0,
                                         bottom: 0,
-                                        backgroundImage: `url(${posterUrl})`,
+                                        backgroundImage: `url(${imageUrl})`,
                                         backgroundSize: 'cover',
                                         backgroundPosition: 'center'
                                     }} />
@@ -548,31 +595,294 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
                 </div>
 
                 {!isMobile && (
-                    <>
+                    <button 
+                        onClick={() => scroll('right')}
+                        style={{
+                            position: 'absolute',
+                            right: '-10px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'rgba(10, 6, 20, 0.75)',
+                            border: '1px solid rgba(211, 82, 255, 0.3)',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            cursor: 'pointer',
+                            zIndex: 3,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <ChevronRightIcon fontSize="small" />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
+
+/* ==========================================================================
+   Zaflix Movie/TV Show Details Modal with Season Dropdown (Optimized)
+   ========================================================================== */
+interface DetailsModalProps {
+    item: any;
+    onClose: () => void;
+}
+const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
+    const { __legacyApiClient__: apiClient, user } = useApi();
+    const { isMobile, isTablet } = useMediaQuery();
+    const [seasons, setSeasons] = useState<any[]>([]);
+    const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
+    const [episodes, setEpisodes] = useState<any[]>([]);
+
+    // Fetch seasons if TV show
+    useEffect(() => {
+        if (!apiClient || !user || item.Type !== 'Series') return;
+
+        apiClient.getJSON(apiClient.getUrl(`Shows/${item.Id}/Seasons?userId=${user.Id}`))
+            .then((res: any) => {
+                if (res && res.Items) {
+                    setSeasons(res.Items);
+                    if (res.Items.length > 0) {
+                        setSelectedSeasonId(res.Items[0].Id);
+                    }
+                }
+            }).catch(err => console.error('[DetailsModal] failed to load seasons', err));
+    }, [apiClient, user, item]);
+
+    // Fetch episodes when selected season changes
+    useEffect(() => {
+        if (!apiClient || !user || !selectedSeasonId) return;
+
+        apiClient.getJSON(apiClient.getUrl(`Shows/${item.Id}/Episodes?seasonId=${selectedSeasonId}&userId=${user.Id}`))
+            .then((res: any) => {
+                if (res && res.Items) {
+                    setEpisodes(res.Items);
+                }
+            }).catch(err => console.error('[DetailsModal] failed to load episodes', err));
+    }, [apiClient, user, selectedSeasonId, item]);
+
+    const handlePlay = (mediaId = item.Id) => {
+        if (!apiClient) return;
+        playbackManager.play({
+            ids: [mediaId],
+            serverId: apiClient.serverId()
+        });
+        onClose();
+    };
+
+    const backdropUrl = apiClient ? apiClient.getUrl(`Items/${item.Id}/Images/Backdrop/0?quality=90`) : '';
+
+    return (
+        <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(5, 3, 10, 0.94)',
+            zIndex: 1000,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: isMobile ? '10px' : '20px',
+            animation: 'zaflixFadeIn 0.3s ease forwards'
+        }}>
+            <div style={{
+                position: 'relative',
+                width: '100%',
+                maxWidth: '820px',
+                height: '92vh',
+                backgroundColor: '#0a0614',
+                borderRadius: '12px',
+                border: '1px solid rgba(211, 82, 255, 0.25)',
+                overflowY: 'auto',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.8), 0 0 30px rgba(211, 82, 255, 0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                scrollbarWidth: 'none'
+            }}>
+                {/* Close Button */}
+                <button 
+                    onClick={onClose}
+                    style={{
+                        position: 'absolute',
+                        top: '15px',
+                        right: '15px',
+                        background: 'rgba(10, 6, 20, 0.75)',
+                        border: '1px solid rgba(211, 82, 255, 0.3)',
+                        borderRadius: '50%',
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        zIndex: 10
+                    }}
+                >
+                    <CloseIcon />
+                </button>
+
+                {/* Hero Banner Backdrop */}
+                <div style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: isMobile ? '200px' : '300px',
+                    flexShrink: 0
+                }}>
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundImage: `url(${backdropUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center 20%'
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'linear-gradient(to top, #0a0614 0%, rgba(10, 6, 20, 0.2) 80%, rgba(10, 6, 20, 0) 100%)'
+                    }} />
+
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '20px',
+                        left: '5%',
+                        zIndex: 2,
+                        display: 'flex',
+                        gap: '15px'
+                    }}>
                         <button 
-                            onClick={() => scroll('right')}
+                            onClick={() => handlePlay()}
                             style={{
-                                position: 'absolute',
-                                right: '-10px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                background: 'rgba(10, 6, 20, 0.75)',
-                                border: '1px solid rgba(211, 82, 255, 0.3)',
+                                padding: '8px 24px',
+                                fontSize: '1rem',
+                                fontWeight: 'bold',
+                                borderRadius: '6px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #00f0ff 0%, #d352ff 100%)',
                                 color: '#fff',
-                                borderRadius: '50%',
-                                width: '32px',
-                                height: '32px',
                                 cursor: 'pointer',
-                                zIndex: 3,
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                gap: '8px',
+                                boxShadow: '0 4px 15px rgba(211, 82, 255, 0.4)'
                             }}
                         >
-                            <ChevronRightIcon fontSize="small" />
+                            <PlayArrowIcon /> Play
                         </button>
-                    </>
-                )}
+                    </div>
+                </div>
+
+                {/* Detail Information */}
+                <div style={{ padding: '25px', color: '#fff', display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
+                    <h1 style={{ fontSize: isMobile ? '1.8rem' : '2.2rem', margin: 0, fontWeight: 800 }}>{item.Name}</h1>
+                    
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center', fontSize: '0.9rem', color: '#dcd9fd' }}>
+                        {item.ProductionYear && <span>{item.ProductionYear}</span>}
+                        {item.CommunityRating && (
+                            <span style={{ color: '#00f0ff', fontWeight: 'bold' }}>
+                                ★ {item.CommunityRating.toFixed(1)}
+                            </span>
+                        )}
+                        {item.Genres && item.Genres.slice(0, 3).map((g: string) => (
+                            <span key={g} style={{
+                                padding: '2px 8px',
+                                background: 'rgba(211, 82, 255, 0.12)',
+                                border: '1px solid rgba(211, 82, 255, 0.25)',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem'
+                            }}>{g}</span>
+                        ))}
+                    </div>
+
+                    <p style={{ fontSize: '1rem', lineHeight: '1.5', color: '#dcd9fd', margin: 0 }}>{item.Overview}</p>
+
+                    {/* TV Show Episodes Section */}
+                    {item.Type === 'Series' && (
+                        <div style={{ marginTop: '20px' }}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                borderBottom: '1px solid rgba(211, 82, 255, 0.2)',
+                                paddingBottom: '12px',
+                                marginBottom: '15px'
+                            }}>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Episodes</h3>
+                                
+                                {/* Custom Styled Dropdown */}
+                                <select 
+                                    value={selectedSeasonId}
+                                    onChange={(e) => setSelectedSeasonId(e.target.value)}
+                                    style={{
+                                        background: '#140d27',
+                                        color: '#fff',
+                                        border: '1px solid rgba(211, 82, 255, 0.4)',
+                                        padding: '6px 12px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9rem',
+                                        outline: 'none',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {seasons.map((s) => (
+                                        <option key={s.Id} value={s.Id}>{s.Name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Episode List */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                {episodes.map((ep, idx) => (
+                                    <div 
+                                        key={ep.Id}
+                                        onClick={() => handlePlay(ep.Id)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '15px',
+                                            padding: '10px',
+                                            borderRadius: '8px',
+                                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                                            background: 'rgba(20, 13, 39, 0.3)',
+                                            cursor: 'pointer',
+                                            transition: 'background 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(194, 109, 240, 0.08)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(20, 13, 39, 0.3)'}
+                                    >
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#c26df0', width: '25px', textAlign: 'center' }}>
+                                            {idx + 1}
+                                        </span>
+                                        <div style={{ flex: 1, textAlign: 'left' }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#fff' }}>
+                                                {ep.Name}
+                                            </div>
+                                            {ep.Overview && (
+                                                <p style={{ 
+                                                    margin: '4px 0 0 0', 
+                                                    fontSize: '0.85rem', 
+                                                    color: '#dcd9fd',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    {ep.Overview}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <PlayArrowIcon style={{ color: '#c26df0' }} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -585,6 +895,7 @@ const Home = () => {
     const [ searchParams ] = useSearchParams();
     const initialTabIndex = parseInt(searchParams.get('tab') ?? '0', 10);
     const [categoryFilter, setCategoryFilter] = useState<'home' | 'movies' | 'shows' | 'mylist' | 'collections' | 'anime'>('home');
+    const [selectedDetailItem, setSelectedDetailItem] = useState<any>(null);
     const { isMobile } = useMediaQuery();
 
     const libraryMenu = useMemo(async () => ((await import('../../../scripts/libraryMenu')).default), []);
@@ -718,6 +1029,17 @@ const Home = () => {
         };
     }, [ renderHome ]);
 
+    // Details Modal custom event triggers
+    useEffect(() => {
+        const handleOpenDetails = (e: any, itemDetail: any) => {
+            setSelectedDetailItem(itemDetail);
+        };
+        Events.on(document, 'open-zaflix-details', handleOpenDetails);
+        return () => {
+            Events.off(document, 'open-zaflix-details', handleOpenDetails);
+        };
+    }, []);
+
     // Helper to render Category Filter Bar
     const renderCategoryBar = () => {
         const categories: { id: typeof categoryFilter; label: string }[] = [
@@ -841,6 +1163,14 @@ const Home = () => {
                     <div className='sections'></div>
                 </div>
             </Page>
+
+            {/* Custom Details Overlay Modal */}
+            {selectedDetailItem && (
+                <DetailsModal 
+                    item={selectedDetailItem}
+                    onClose={() => setSelectedDetailItem(null)}
+                />
+            )}
         </div>
     );
 };
