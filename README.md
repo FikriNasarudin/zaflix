@@ -23,12 +23,7 @@ The official Jellyfin Web client styling has been customized with the following 
 
 ---
 
-## 🛠️ How to Run and Use
-
-> [!IMPORTANT]  
-> The code in this repository is the **frontend web interface** only. To stream media, it must connect to a running Jellyfin media server backend.
-
-### Local Development (Frontend Only)
+## 🛠️ Local Development (Frontend Only)
 
 To run the custom UI locally and connect it to your existing backend server:
 
@@ -49,51 +44,61 @@ To run the custom UI locally and connect it to your existing backend server:
 
 ---
 
-## 🐳 Deploying to a Docker Jellyfin Server
+## 🚀 CI/CD Automated Deployment (Recommended)
 
-If you already have a running Jellyfin server in Docker, you can apply your compiled custom UI using one of two methods:
+A GitHub Actions workflow is configured in [deploy.yml](.github/workflows/deploy.yml) to automatically compile and deploy your code. The local `dist` folder remains in `.gitignore` on your development branch (`staging`).
 
-### Method 1: The Quick Test (`docker cp`) — *No restarts required*
-Use this to copy built files directly into your running container:
+### How it works:
+1. When you push your code modifications to the **`staging`** branch, the GitHub Action automatically runs, installs Node 24, compiles your UI via `npm run build:production`, and pushes the compiled files directly into a clean **`release`** branch.
+2. The `release` branch contains the ready-to-serve web assets at its root.
 
-1. **Compile your production files**:
+### Setup on your Server:
+
+To deploy the compiled files on your server:
+
+1. **Clone and checkout the `release` branch**:
    ```bash
-   npm run build:production
+   # Go to your media-server directory
+   cd /shares/usb-storage/media-server/jellyfin
+   
+   # Clone (or go into the existing folder)
+   cd zaflix
+   
+   # Checkout the release branch (only contains compiled static assets)
+   git fetch origin
+   git checkout release
    ```
-2. **Copy files directly into the container**:
+
+2. **To update the UI in the future**:
+   Simply run this on your server when you push changes to staging (wait a minute for the CI/CD to finish building):
    ```bash
-   docker cp ./dist/. <your-container-name-or-id>:/jellyfin/jellyfin-web/
+   git pull
    ```
-   *(Replace `<your-container-name-or-id>` with your running Jellyfin container name).*
-3. Refresh your browser (do a hard refresh with `Ctrl + F5` to clear cache).
-   *(Note: If the container is recreated or updated, this copy will be reset.)*
 
-### Method 2: Permanent Volume Mount — *Recommended*
-Mount the compiled `dist` directory as a volume to keep it persistent.
+---
 
-* **Docker Compose**: Add the mount to your volumes list:
-  ```yaml
-  services:
-    jellyfin:
-      image: jellyfin/jellyfin
-      # ... your existing configs ...
-      volumes:
-        - ./dist:/jellyfin/jellyfin-web:ro
-  ```
+## 🐳 Running on Docker Jellyfin Server
 
-* **Docker Run CLI**: Add the `-v volume flag**:
-  ```bash
-  docker run -d \
-    --name jellyfin \
-    -v $(pwd)/dist:/jellyfin/jellyfin-web:ro \
-    # ... your existing port/volume flags ...
-    jellyfin/jellyfin
-  ```
+Update your Docker volume configurations on the server to point to the root of the **`release`** branch repository path (since the compiled assets are directly in the root of the branch, not inside a `dist/` subfolder):
 
-> [!TIP]
-> **Can I use `git` and `curl` directly inside my Jellyfin server?**  
-> **No.** The official Jellyfin Docker image is minimal and secure, meaning development/download utilities like `git` or `curl` are not installed inside the container.  
-> **Best Practice**: Always clone, pull, and compile this repository on your **host machine** (where you run Docker) using `git` and `npm`, and then mount the output `dist` folder into the container using **Method 2** above. This keeps your running container lightweight, clean, and secure.
+### Docker Compose
+```yaml
+services:
+  jellyfin:
+    image: jellyfin/jellyfin
+    # ... your existing configs ...
+    volumes:
+      - /shares/usb-storage/media-server/jellyfin/zaflix:/jellyfin/jellyfin-web:ro
+```
+
+### Docker Run CLI
+```bash
+docker run -d \
+  --name jellyfin \
+  -v /shares/usb-storage/media-server/jellyfin/zaflix:/jellyfin/jellyfin-web:ro \
+  # ... your other mounts ...
+  jellyfin/jellyfin
+```
 
 ---
 
