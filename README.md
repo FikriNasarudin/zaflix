@@ -1,92 +1,107 @@
-# Zaflix
+# Zaflix (Customized Jellyfin Web Client)
 
-Zaflix is a React + Vite web application containerized with Docker and integrated with a GitHub Actions CI/CD pipeline.
-
-## Features
-
-- **React & Vite**: Extremely fast development server and optimized build process.
-- **Docker Support**: Preconfigured `Dockerfile` utilizing multi-stage builds (`node:20-alpine` + `nginx:alpine`) to minimize final image size.
-- **Docker Compose**: Single-command local environment startup.
-- **CI/CD Integration**: Automatic Docker builds and pushes to GitHub Container Registry (GHCR) on pushes to the `main` branch.
+This repository is a customized version of the official **[Jellyfin Web Client](https://github.com/jellyfin/jellyfin-web)**, styled with the sleek, dark, glassmorphic **Zaflix** theme.
 
 ---
 
-## Local Development
+## 📂 Workspace Layout
 
-### 1. Traditional Node.js
-Ensure you have Node.js installed, then run:
+- **Root Directory (`/`)**: Holds the customized `jellyfin-web` codebase.
+- **[`/react`](./react)**: Holds the original standalone custom React + Vite client.
 
+---
+
+## 🎨 Theme Customization Details (Zaflix Style)
+
+The official Jellyfin Web client styling has been customized with the following design tokens:
+* **Background Color**: `#0a0614` (Deep velvet violet)
+* **Card & Panel Backgrounds**: `#140d27` (Dark amethyst)
+* **Accent & Primary Colors**: `#c26df0` (Neon purple/magenta) with `#d991ff` hover/glow highlights
+* **Divider & Action Borders**: `rgba(211, 82, 255, 0.2)`
+* **Typography**: Integrated Google Fonts (`Outfit` for headings and brand elements, `Inter` for standard UI copy)
+* **Aesthetics**: Glassmorphism on headers, neon outline inputs, smooth cubic scaling cards on hover, and glowing linear gradients on primary buttons.
+
+---
+
+## 🛠️ How to Run and Use
+
+> [!IMPORTANT]  
+> The code in this repository is the **frontend web interface** only. To stream media, it must connect to a running Jellyfin media server backend.
+
+### Local Development (Frontend Only)
+
+To run the custom UI locally and connect it to your existing backend server:
+
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Start the development server**:
+   ```bash
+   npm start
+   ```
+   *This starts the Webpack dev server, which will compile your custom styling and host the site (usually on `http://localhost:8080`).*
+
+3. **Connect to your server**:
+   - Open your browser to the URL displayed in the terminal (e.g., `http://localhost:8080`).
+   - Enter the IP address/domain and credentials of your backend Jellyfin server to log in and test your customized interface.
+
+---
+
+## 🐳 Deploying to a Docker Jellyfin Server
+
+If you already have a running Jellyfin server in Docker, you can apply your compiled custom UI using one of two methods:
+
+### Method 1: The Quick Test (`docker cp`) — *No restarts required*
+Use this to copy built files directly into your running container:
+
+1. **Compile your production files**:
+   ```bash
+   npm run build:production
+   ```
+2. **Copy files directly into the container**:
+   ```bash
+   docker cp ./dist/. <your-container-name-or-id>:/jellyfin/jellyfin-web/
+   ```
+   *(Replace `<your-container-name-or-id>` with your running Jellyfin container name).*
+3. Refresh your browser (do a hard refresh with `Ctrl + F5` to clear cache).
+   *(Note: If the container is recreated or updated, this copy will be reset.)*
+
+### Method 2: Permanent Volume Mount — *Recommended*
+Mount the compiled `dist` directory as a volume to keep it persistent.
+
+* **Docker Compose**: Add the mount to your volumes list:
+  ```yaml
+  services:
+    jellyfin:
+      image: jellyfin/jellyfin
+      # ... your existing configs ...
+      volumes:
+        - ./dist:/jellyfin/jellyfin-web:ro
+  ```
+
+* **Docker Run CLI**: Add the `-v` volume flag:
+  ```bash
+  docker run -d \
+    --name jellyfin \
+    -v $(pwd)/dist:/jellyfin/jellyfin-web:ro \
+    # ... your existing port/volume flags ...
+    jellyfin/jellyfin
+  ```
+
+---
+
+## ⚙️ Original Standalone React Client (Vite)
+If you want to run the standalone React client:
 ```bash
-# Install dependencies
+cd react
 npm install
-
-# Run dev server (will expose on host)
 npm run dev
-
-# Build for production
-npm run build
 ```
-
-### 2. Run with Docker Compose
-If you have Docker Desktop installed and running, you can run the built production version of the app locally:
-
-```bash
-# Build and start the container
-docker compose up -d --build
-```
-Once started, access the application at **`http://localhost:8080`**.
+Check out the **[React Client README](./react/README.md)** for details on homelab and Docker compose deployment.
 
 ---
 
-## CI/CD Pipeline & GitHub Container Registry
-
-The repository contains a GitHub Actions workflow under `.github/workflows/docker-publish.yml`. When you push to the `main` branch, the workflow will:
-
-1. Checkout the source code.
-2. Build the production Docker image.
-3. Authenticate with the GitHub Container Registry (`ghcr.io`).
-4. Publish the built image to your repository's packages (tagged as `latest` and with the commit SHA).
-
-### Deploying to GitHub
-
-To link this local project to your GitHub repository and activate the pipeline:
-
-```bash
-# Stage and commit files
-git add .
-git commit -m "Initial commit with Docker and CI/CD workflow"
-
-# Rename local branch to main
-git branch -m main
-
-# Link your remote GitHub repository
-git remote add origin git@github.com:<YOUR_GITHUB_USERNAME>/zaflix.git
-
-# Push to GitHub
-git push -u origin main
-```
-
----
-
-## Homelab Deployment
-
-To deploy this application to your homelab using Docker Compose, you can pull the prebuilt image from the GitHub Container Registry (GHCR) rather than compiling the source code locally.
-
-Create a `docker-compose.yml` in your homelab deployment directory:
-
-```yaml
-version: '3.8'
-
-services:
-  zaflix:
-    image: ghcr.io/fikrinasarudin/zaflix:latest
-    container_name: zaflix-web
-    ports:
-      - "8080:80"
-    restart: unless-stopped
-```
-
-Run the container:
-```bash
-docker compose up -d
-```
+## ⚖️ License
+This project inherits the original **GNU General Public License v2.0** of the Jellyfin Web project.
