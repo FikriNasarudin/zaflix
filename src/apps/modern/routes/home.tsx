@@ -144,8 +144,6 @@ const Billboard = () => {
                 borderRadius: '12px',
                 overflow: 'hidden',
                 marginBottom: '20px',
-                boxShadow: '0 8px 30px rgba(0,0,0,0.7), 0 0 20px rgba(211, 82, 255, 0.15)',
-                border: '1px solid rgba(211, 82, 255, 0.2)',
                 background: '#140d27',
                 transition: 'height 0.3s ease'
             }}
@@ -219,14 +217,28 @@ const Billboard = () => {
                 gap: isMobile ? '8px' : '12px',
                 textAlign: 'left'
             }}>
-                <h1 style={{
-                    fontSize: titleSize,
-                    margin: 0,
-                    textShadow: '0 0 10px rgba(211, 82, 255, 0.5)',
-                    fontWeight: 800,
-                    letterSpacing: '-0.5px',
-                    lineHeight: 1.1
-                }}>{currentItem.Name}</h1>
+                {currentItem.ImageTags && currentItem.ImageTags.Logo ? (
+                    <img 
+                        src={apiClient?.getUrl(`Items/${currentItem.Id}/Images/Logo?maxHeight=120`) || ''} 
+                        style={{
+                            maxHeight: isMobile ? '60px' : '100px',
+                            maxWidth: '90%',
+                            objectFit: 'contain',
+                            alignSelf: 'flex-start',
+                            marginBottom: '5px'
+                        }} 
+                        alt={currentItem.Name} 
+                    />
+                ) : (
+                    <h1 style={{
+                        fontSize: titleSize,
+                        margin: 0,
+                        textShadow: '0 0 10px rgba(211, 82, 255, 0.5)',
+                        fontWeight: 800,
+                        letterSpacing: '-0.5px',
+                        lineHeight: 1.1
+                    }}>{currentItem.Name}</h1>
+                )}
                 
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', fontSize: '0.85rem', color: '#dcd9fd' }}>
                     {currentItem.ProductionYear && <span>{currentItem.ProductionYear}</span>}
@@ -440,8 +452,9 @@ const NetworkSelector = () => {
 interface MediaRowProps {
     title: string;
     query: any;
+    isTop10?: boolean;
 }
-const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
+const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
     const { __legacyApiClient__: apiClient, user } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
     const [items, setItems] = useState<any[]>([]);
@@ -451,7 +464,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
         if (!apiClient || !user || !user.Id) return;
         apiClient.getItems(user.Id, {
             ...query,
-            Fields: 'Overview,CommunityRating,ProductionYear,UserData'
+            Fields: 'Overview,CommunityRating,ProductionYear,UserData,ImageTags'
         }).then((result: any) => {
             if (result && result.Items) {
                 setItems(result.Items);
@@ -462,12 +475,36 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
     }, [apiClient, user, query, title]);
 
     const scroll = (direction: 'left' | 'right') => {
-        if (rowRef.current) {
-            const scrollAmount = rowRef.current.clientWidth * 0.8;
-            rowRef.current.scrollBy({
-                left: direction === 'left' ? -scrollAmount : scrollAmount,
-                behavior: 'smooth'
-            });
+        const container = rowRef.current;
+        if (!container) return;
+
+        const scrollAmount = container.clientWidth * 0.8;
+        const maxScroll = container.scrollWidth - container.clientWidth;
+
+        if (direction === 'left') {
+            if (container.scrollLeft <= 5) {
+                container.scrollTo({
+                    left: maxScroll,
+                    behavior: 'smooth'
+                });
+            } else {
+                container.scrollBy({
+                    left: -scrollAmount,
+                    behavior: 'smooth'
+                });
+            }
+        } else {
+            if (container.scrollLeft >= maxScroll - 5) {
+                container.scrollTo({
+                    left: 0,
+                    behavior: 'smooth'
+                });
+            } else {
+                container.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'smooth'
+                });
+            }
         }
     };
 
@@ -526,7 +563,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
                         WebkitOverflowScrolling: 'touch'
                     }}
                 >
-                    {items.map((item) => {
+                    {items.map((item, index) => {
                         // Fetch Backdrop image for Landscape layout, fallback to Primary
                         const imageUrl = apiClient 
                             ? (item.BackdropImageTags && item.BackdropImageTags.length > 0
@@ -545,7 +582,9 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
                                 onClick={handleItemClick}
                                 style={{
                                     flex: '0 0 auto',
-                                    width: cardWidth,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    width: isTop10 ? `calc(${cardWidth} + 45px)` : cardWidth,
                                     cursor: 'pointer',
                                     transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                                 }}
@@ -556,9 +595,25 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
                                     if (!isMobile) e.currentTarget.style.transform = 'scale(1)';
                                 }}
                             >
+                                {isTop10 && (
+                                    <div style={{
+                                        fontSize: isMobile ? '4.5rem' : '6.5rem',
+                                        fontWeight: 900,
+                                        color: '#0a0614',
+                                        WebkitTextStroke: '2.5px rgba(211, 82, 255, 0.65)',
+                                        textShadow: '0 0 20px rgba(211, 82, 255, 0.4)',
+                                        lineHeight: '1',
+                                        marginRight: '-15px',
+                                        zIndex: 2,
+                                        userSelect: 'none',
+                                        fontFamily: 'Outfit, sans-serif'
+                                    }}>
+                                        {index + 1}
+                                    </div>
+                                )}
                                 <div style={{
                                     position: 'relative',
-                                    width: '100%',
+                                    flex: 1,
                                     paddingTop: '56.25%', // 16:9 Aspect Ratio
                                     borderRadius: '8px',
                                     overflow: 'hidden',
@@ -576,18 +631,48 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
                                         backgroundSize: 'cover',
                                         backgroundPosition: 'center'
                                     }} />
-                                </div>
-                                <div style={{
-                                    marginTop: '6px',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 'bold',
-                                    color: '#fff',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    padding: '0 2px'
-                                }}>
-                                    {item.Name}
+
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0, left: 0, right: 0, bottom: 0,
+                                        background: 'linear-gradient(to top, rgba(10, 6, 20, 0.75) 0%, rgba(10, 6, 20, 0) 50%)',
+                                        zIndex: 2
+                                    }} />
+
+                                    {/* Logo Image Tag or Text Title Overlay on Card */}
+                                    {item.ImageTags && item.ImageTags.Logo ? (
+                                        <img 
+                                            src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=40`) || ''} 
+                                            style={{
+                                                maxHeight: isMobile ? '20px' : '28px',
+                                                maxWidth: '85%',
+                                                objectFit: 'contain',
+                                                position: 'absolute',
+                                                bottom: '10px',
+                                                left: '10px',
+                                                zIndex: 3
+                                            }} 
+                                            alt={item.Name} 
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '10px',
+                                            left: '10px',
+                                            zIndex: 3,
+                                            fontWeight: 'bold',
+                                            fontSize: isMobile ? '0.7rem' : '0.8rem',
+                                            color: '#fff',
+                                            textShadow: '0 1px 4px rgba(0,0,0,0.9)',
+                                            textAlign: 'left',
+                                            maxWidth: '90%',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {item.Name}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -636,12 +721,13 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const [seasons, setSeasons] = useState<any[]>([]);
     const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
     const [episodes, setEpisodes] = useState<any[]>([]);
+    const [similarItems, setSimilarItems] = useState<any[]>([]);
 
     // Fetch seasons if TV show
     useEffect(() => {
-        if (!apiClient || !user || item.Type !== 'Series') return;
+        if (!apiClient || !user || !user.Id || item.Type !== 'Series') return;
 
-        apiClient.getJSON(apiClient.getUrl(`Shows/${item.Id}/Seasons?userId=${user.Id}`))
+        apiClient.getSeasons(item.Id, { userId: user.Id })
             .then((res: any) => {
                 if (res && res.Items) {
                     setSeasons(res.Items);
@@ -654,15 +740,27 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
 
     // Fetch episodes when selected season changes
     useEffect(() => {
-        if (!apiClient || !user || !selectedSeasonId) return;
+        if (!apiClient || !user || !user.Id || !selectedSeasonId) return;
 
-        apiClient.getJSON(apiClient.getUrl(`Shows/${item.Id}/Episodes?seasonId=${selectedSeasonId}&userId=${user.Id}`))
+        apiClient.getEpisodes(item.Id, { seasonId: selectedSeasonId, userId: user.Id, Fields: 'Overview' })
             .then((res: any) => {
                 if (res && res.Items) {
                     setEpisodes(res.Items);
                 }
             }).catch(err => console.error('[DetailsModal] failed to load episodes', err));
     }, [apiClient, user, selectedSeasonId, item]);
+
+    // Fetch similar items (More Like This)
+    useEffect(() => {
+        if (!apiClient || !user || !user.Id) return;
+
+        apiClient.getJSON(apiClient.getUrl(`Items/${item.Id}/Similar?limit=6&userId=${user.Id}`))
+            .then((res: any) => {
+                if (res && res.Items) {
+                    setSimilarItems(res.Items);
+                }
+            }).catch(err => console.error('[DetailsModal] failed to load similar items', err));
+    }, [apiClient, user, item]);
 
     const handlePlay = (mediaId = item.Id) => {
         if (!apiClient) return;
@@ -779,7 +877,21 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
 
                 {/* Detail Information */}
                 <div style={{ padding: '25px', color: '#fff', display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
-                    <h1 style={{ fontSize: isMobile ? '1.8rem' : '2.2rem', margin: 0, fontWeight: 800 }}>{item.Name}</h1>
+                    {item.ImageTags && item.ImageTags.Logo ? (
+                        <img 
+                            src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=80`) || ''} 
+                            style={{
+                                maxHeight: isMobile ? '50px' : '75px',
+                                maxWidth: '90%',
+                                objectFit: 'contain',
+                                alignSelf: 'flex-start',
+                                marginBottom: '5px'
+                            }} 
+                            alt={item.Name} 
+                        />
+                    ) : (
+                        <h1 style={{ fontSize: isMobile ? '1.8rem' : '2.2rem', margin: 0, fontWeight: 800 }}>{item.Name}</h1>
+                    )}
                     
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center', fontSize: '0.9rem', color: '#dcd9fd' }}>
                         {item.ProductionYear && <span>{item.ProductionYear}</span>}
@@ -879,6 +991,67 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         <PlayArrowIcon style={{ color: '#c26df0' }} />
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* More Like This (Similar Recommendations) */}
+                    {similarItems.length > 0 && (
+                        <div style={{ marginTop: '25px' }}>
+                            <h3 style={{
+                                borderBottom: '1px solid rgba(211, 82, 255, 0.2)',
+                                paddingBottom: '12px',
+                                marginBottom: '15px',
+                                fontSize: '1.25rem',
+                                fontWeight: 700
+                            }}>More Like This</h3>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                                gap: '15px'
+                            }}>
+                                {similarItems.map((similarItem) => {
+                                    const similarPoster = apiClient 
+                                        ? (similarItem.BackdropImageTags && similarItem.BackdropImageTags.length > 0
+                                            ? apiClient.getUrl(`Items/${similarItem.Id}/Images/Backdrop/0?quality=80`)
+                                            : apiClient.getUrl(`Items/${similarItem.Id}/Images/Primary?quality=80`))
+                                        : '';
+                                    return (
+                                        <div 
+                                            key={similarItem.Id}
+                                            onClick={() => {
+                                                // Switch modal to this item
+                                                Events.trigger(document, 'open-zaflix-details', [similarItem]);
+                                            }}
+                                            style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                        >
+                                            <div style={{
+                                                position: 'relative',
+                                                paddingTop: '56.25%',
+                                                borderRadius: '6px',
+                                                overflow: 'hidden',
+                                                border: '1px solid rgba(211, 82, 255, 0.15)',
+                                                backgroundImage: `url(${similarPoster})`,
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                                backgroundColor: '#140d27'
+                                            }} />
+                                            <div style={{
+                                                marginTop: '6px',
+                                                fontSize: '0.8rem',
+                                                fontWeight: 'bold',
+                                                textAlign: 'left',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                {similarItem.Name}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -1123,8 +1296,14 @@ const Home = () => {
                                 <Billboard />
                                 <NetworkSelector />
                                 <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary' }} />
-                                <MediaRow title="Top Picks (Top Rated)" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie,Series', Recursive: true }} />
-                                <MediaRow title="Recently Added" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie,Series', Recursive: true }} />
+                                <MediaRow title="Suggested for You" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie,Series', Recursive: true }} />
+                                <MediaRow title="My List" query={{ Filters: 'IsFavorite', Limit: 12, Recursive: true }} />
+                                <MediaRow title="Featured Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
+                                <MediaRow title="Top 10 Movies" query={{ IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
+                                <MediaRow title="Top 10 TV Shows" query={{ IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
+                                <MediaRow title="Top 10 Anime" query={{ Genres: 'Anime', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
+                                <MediaRow title="Recently Added Movies" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
+                                <MediaRow title="Recently Added TV Shows" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
                             </>
                         )}
 
