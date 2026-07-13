@@ -66,7 +66,7 @@ const Billboard = () => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
-        if (!apiClient || !user) return;
+        if (!apiClient || !user || !user.Id) return;
 
         apiClient.getItems(user.Id, {
             SortBy: 'DateCreated',
@@ -403,7 +403,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query }) => {
     const rowRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!apiClient || !user) return;
+        if (!apiClient || !user || !user.Id) return;
         apiClient.getItems(user.Id, {
             ...query,
             Fields: 'Overview,CommunityRating,ProductionYear,UserData'
