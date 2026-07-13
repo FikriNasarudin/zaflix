@@ -19,7 +19,9 @@ import {
   Grid,
   Plus,
   Check,
-  Sparkles
+  Sparkles,
+  Home,
+  Heart
 } from 'lucide-react';
 
 // Client-side GET requests Cache
@@ -98,11 +100,35 @@ export default function App() {
   const [formToken, setFormToken] = useState(token || '');
   const [formUsername, setFormUsername] = useState('');
   const [formPassword, setFormPassword] = useState('');
-  const [authMethod, setAuthMethod] = useState('token'); // 'token' or 'login'
+  const [authMethod, setAuthMethod] = useState('login'); // 'token' or 'login'
   const [errorMsg, setErrorMsg] = useState('');
 
   // Media dashboard states
-  const [filterType, setFilterType] = useState('All'); // 'All', 'Movie', 'Series', 'MyList', 'BoxSet', 'Anime'
+  const [filterType, setFilterType] = useState('All'); // 'All', 'Movie', 'Series', 'MyList', 'BoxSet', 'Anime', 'Network'
+  const [selectedNetwork, setSelectedNetwork] = useState(null);
+  const [networkOrigin, setNetworkOrigin] = useState('All');
+  const [availableNetworks, setAvailableNetworks] = useState([]);
+  
+  const networks = [
+    { name: 'Netflix', className: 'network-netflix' },
+    { name: 'Disney+', className: 'network-disney', studioName: 'Disney' },
+    { name: 'Hulu', className: 'network-hulu' },
+    { name: 'HBO', className: 'network-hbo', studioName: 'HBO' },
+    { name: 'Fox', className: 'network-fox', studioName: 'Fox' },
+    { name: 'Prime Video', className: 'network-prime', studioName: 'Amazon' },
+    { name: 'Apple TV+', className: 'network-apple', studioName: 'Apple' },
+    { name: 'Animax', className: 'network-animax' },
+    { name: 'Crunchyroll', className: 'network-crunchyroll' },
+    { name: 'Paramount+', className: 'network-paramount', studioName: 'Paramount' }
+  ];
+
+  const handleNetworkClick = (network, origin = 'All') => {
+    const netName = typeof network === 'string' ? network : (network.name || '');
+    setSelectedNetwork(netName);
+    setNetworkOrigin(origin);
+    setFilterType('Network');
+  };
+
   const [animeLibraryId, setAnimeLibraryId] = useState(null);
   const [topAnime, setTopAnime] = useState([]);
   const [billboardItem, setBillboardItem] = useState(null);
@@ -111,6 +137,18 @@ export default function App() {
   const [recentlyAddedMovies, setRecentlyAddedMovies] = useState([]);
   const [recentlyAddedShows, setRecentlyAddedShows] = useState([]);
   const [continueWatching, setContinueWatching] = useState([]);
+  const [movieTopPicks, setMovieTopPicks] = useState([]);
+  const [userTopGenres, setUserTopGenres] = useState([]);
+  const [genreMoviesMap, setGenreMoviesMap] = useState({});
+  const [selectedGenreView, setSelectedGenreView] = useState(null);
+  const [allMoviesLatest, setAllMoviesLatest] = useState([]);
+  
+  // TV Shows custom sections states
+  const [showTopPicks, setShowTopPicks] = useState([]);
+  const [userTopGenresSeries, setUserTopGenresSeries] = useState([]);
+  const [genreShowsMap, setGenreShowsMap] = useState({});
+  const [selectedGenreViewSeries, setSelectedGenreViewSeries] = useState(null);
+
   const [myList, setMyList] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [similarItems, setSimilarItems] = useState([]);
@@ -130,7 +168,7 @@ export default function App() {
   const [billboardItems, setBillboardItems] = useState([]);
   const [billboardIndex, setBillboardIndex] = useState(0);
   const [playClip, setPlayClip] = useState(false);
-  const [billboardClipMap, setBillboardClipMap] = useState({});
+  const [billboardVideoMap, setBillboardVideoMap] = useState({});
   const [isClipMuted, setIsClipMuted] = useState(true);
 
   // Modal detail states
@@ -150,8 +188,22 @@ export default function App() {
   const [showTracksPopup, setShowTracksPopup] = useState(false);
   const [showSettingsPopup, setShowSettingsPopup] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [videoQuality, setVideoQuality] = useState('auto');
+  const [videoQuality, setVideoQuality] = useState('direct');
+  const [selectedAudioIndex, setSelectedAudioIndex] = useState(null);
+  const [audioStreams, setAudioStreams] = useState([]);
+  const [subtitleStreams, setSubtitleStreams] = useState([]);
+  const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState(null);
   const [introMarker, setIntroMarker] = useState(null); // { start, end }
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [aspectRatio, setAspectRatio] = useState('contain');
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Video player references
   const videoRef = useRef(null);
@@ -159,6 +211,9 @@ export default function App() {
   const controlsTimeoutRef = useRef(null);
   const seekTargetTimeRef = useRef(0);
   const durationRef = useRef(0);
+  const [hoverTime, setHoverTime] = useState(null);
+  const [hoverX, setHoverX] = useState(0);
+  const [hoverImageSrc, setHoverImageSrc] = useState('');
 
   // Card hover preview states & logic
   const [hoveredItemId, setHoveredItemId] = useState(null);
@@ -166,7 +221,25 @@ export default function App() {
   const [previewEpisodeId, setPreviewEpisodeId] = useState(null);
   const hoverTimeoutRef = useRef(null);
 
-  const handleCardMouseEnter = (item) => {
+  const handleCardMouseEnter = (e, item) => {
+    if (e && e.currentTarget) {
+      const card = e.currentTarget;
+      const container = card.parentElement;
+      if (container) {
+        const cardRect = card.getBoundingClientRect();
+        const isNearLeft = cardRect.left < 120;
+        const isNearRight = (window.innerWidth - cardRect.right) < 120;
+
+        if (isNearLeft) {
+          card.style.transformOrigin = 'left center';
+        } else if (isNearRight) {
+          card.style.transformOrigin = 'right center';
+        } else {
+          card.style.transformOrigin = 'center center';
+        }
+      }
+    }
+
     setHoveredItemId(item.Id);
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
 
@@ -192,7 +265,10 @@ export default function App() {
     }, 800); // 800ms hover delay
   };
 
-  const handleCardMouseLeave = () => {
+  const handleCardMouseLeave = (e) => {
+    if (e && e.currentTarget) {
+      e.currentTarget.style.transformOrigin = '';
+    }
     setHoveredItemId(null);
     setPreviewActiveId(null);
     setPreviewEpisodeId(null);
@@ -212,6 +288,152 @@ export default function App() {
       'X-Emby-Authorization': `MediaBrowser Client="Zaflix", Device="Web", DeviceId="zaflix-web-client", Version="0.1.0", Token="${token}"`
     };
   };
+
+  const fetchItemDetailsForRoute = async (itemId, mode) => {
+    try {
+      const res = await fetch(`${serverUrl}/Items/${itemId}?userId=${userId}&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData,Genres`, {
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        const item = await res.json();
+        if (mode === 'watch') {
+          setActivePlayback(item);
+        } else {
+          setSelectedShow(item);
+          if (item.Type === 'Series') {
+            fetch(`${serverUrl}/Shows/${item.Id}/Seasons?userId=${userId}`, { headers: getHeaders() })
+              .then(r => r.ok ? r.json() : { Items: [] })
+              .then(data => {
+                setSeasons(data.Items || []);
+                if (data.Items && data.Items.length > 0) {
+                  setSelectedSeasonId(data.Items[0].Id);
+                }
+              });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch item for route', err);
+    }
+  };
+
+  const syncHashToState = () => {
+    const hash = window.location.hash || '#/home';
+    
+    if (hash.startsWith('#/watch/')) {
+      const itemId = hash.substring('#/watch/'.length);
+      if (!activePlayback || activePlayback.Id !== itemId) {
+        fetchItemDetailsForRoute(itemId, 'watch');
+      }
+      return;
+    }
+    
+    if (hash.startsWith('#/details/')) {
+      const itemId = hash.substring('#/details/'.length);
+      if (!selectedShow || selectedShow.Id !== itemId) {
+        fetchItemDetailsForRoute(itemId, 'details');
+      }
+      return;
+    }
+
+    setSelectedShow(null);
+    setActivePlayback(null);
+    
+    if (hash === '#/home' || hash === '#/') {
+      setFilterType('All');
+      setSelectedGenreView(null);
+      setSelectedGenreViewSeries(null);
+      setSelectedNetwork(null);
+    } else if (hash === '#/movies') {
+      setFilterType('Movie');
+      setSelectedGenreView(null);
+      setSelectedGenreViewSeries(null);
+      setSelectedNetwork(null);
+    } else if (hash.startsWith('#/movies/genre/')) {
+      const genre = decodeURIComponent(hash.substring('#/movies/genre/'.length));
+      setFilterType('Movie');
+      handleSeeAllGenre(genre);
+      setSelectedGenreViewSeries(null);
+      setSelectedNetwork(null);
+    } else if (hash === '#/shows') {
+      setFilterType('Series');
+      setSelectedGenreView(null);
+      setSelectedGenreViewSeries(null);
+      setSelectedNetwork(null);
+    } else if (hash.startsWith('#/shows/genre/')) {
+      const genre = decodeURIComponent(hash.substring('#/shows/genre/'.length));
+      setFilterType('Series');
+      setSelectedGenreView(null);
+      handleSeeAllGenreSeries(genre);
+      setSelectedNetwork(null);
+    } else if (hash === '#/anime') {
+      setFilterType('Anime');
+      setSelectedGenreView(null);
+      setSelectedGenreViewSeries(null);
+      setSelectedNetwork(null);
+    } else if (hash === '#/mylist') {
+      setFilterType('MyList');
+      setSelectedGenreView(null);
+      setSelectedGenreViewSeries(null);
+      setSelectedNetwork(null);
+    } else if (hash === '#/collections') {
+      setFilterType('BoxSet');
+      setSelectedGenreView(null);
+      setSelectedGenreViewSeries(null);
+      setSelectedNetwork(null);
+    } else if (hash.startsWith('#/network/')) {
+      const networkQuery = decodeURIComponent(hash.substring('#/network/'.length));
+      const parts = networkQuery.split('?origin=');
+      const netName = parts[0];
+      const origin = parts[1] || 'All';
+      setSelectedNetwork(netName);
+      setNetworkOrigin(origin);
+      setFilterType('Network');
+    }
+  };
+
+  useEffect(() => {
+    if (isConnected) {
+      syncHashToState();
+      window.addEventListener('hashchange', syncHashToState);
+      return () => window.removeEventListener('hashchange', syncHashToState);
+    }
+  }, [isConnected, serverUrl, userId, token]);
+
+  useEffect(() => {
+    if (!isConnected) return;
+    
+    let newHash = '#/home';
+    if (activePlayback) {
+      newHash = `#/watch/${activePlayback.Id}`;
+    } else if (selectedShow) {
+      newHash = `#/details/${selectedShow.Id}`;
+    } else if (filterType === 'Network' && selectedNetwork) {
+      newHash = `#/network/${encodeURIComponent(selectedNetwork)}?origin=${networkOrigin}`;
+    } else if (filterType === 'Movie') {
+      if (selectedGenreView) {
+        newHash = `#/movies/genre/${encodeURIComponent(selectedGenreView.name)}`;
+      } else {
+        newHash = '#/movies';
+      }
+    } else if (filterType === 'Series') {
+      if (selectedGenreViewSeries) {
+        newHash = `#/shows/genre/${encodeURIComponent(selectedGenreViewSeries.name)}`;
+      } else {
+        newHash = '#/shows';
+      }
+    } else if (filterType === 'Anime') {
+      newHash = '#/anime';
+    } else if (filterType === 'MyList') {
+      newHash = '#/mylist';
+    } else if (filterType === 'BoxSet') {
+      newHash = '#/collections';
+    }
+    
+    if (window.location.hash !== newHash) {
+      window.location.hash = newHash;
+    }
+  }, [filterType, selectedGenreView, selectedGenreViewSeries, selectedNetwork, networkOrigin, activePlayback, selectedShow, isConnected]);
 
   // Helper: Handle Image URL
   const getImageUrl = (itemId, type = 'Primary', tag = '', positionTicks = null) => {
@@ -449,6 +671,221 @@ export default function App() {
     }
   };
 
+  const fetchMovieTopPicks = async () => {
+    try {
+      const res = await fetch(`${serverUrl}/Users/${userId}/Suggestions?Limit=40&IncludeItemTypes=Movie&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const movies = (data.Items || []).filter(item => item.Type === 'Movie').slice(0, 10);
+        setMovieTopPicks(movies);
+      }
+    } catch (err) {
+      console.error('Failed to fetch Movie Top Picks', err);
+    }
+  };
+
+  const fetchTopGenreMovies = async () => {
+    try {
+      const [resCw, resFav, resRecent] = await Promise.all([
+        fetch(`${serverUrl}/Users/${userId}/Items/Resume?Limit=20&Recursive=true&IncludeItemTypes=Movie&Fields=Genres`, { headers: getHeaders() }).then(r => r.ok ? r.json() : { Items: [] }),
+        fetch(`${serverUrl}/Users/${userId}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Movie&Fields=Genres`, { headers: getHeaders() }).then(r => r.ok ? r.json() : { Items: [] }),
+        fetch(`${serverUrl}/Users/${userId}/Items?SortBy=DateCreated&SortOrder=Descending&Limit=30&IncludeItemTypes=Movie&Recursive=true&Fields=Genres`, { headers: getHeaders() }).then(r => r.ok ? r.json() : { Items: [] })
+      ]);
+
+      const items = [...(resCw.Items || []), ...(resFav.Items || []), ...(resRecent.Items || [])];
+      const genreCounts = {};
+      items.forEach(item => {
+        if (item.Genres) {
+          item.Genres.forEach(genre => {
+            genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+          });
+        }
+      });
+
+      const sortedGenres = Object.entries(genreCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(entry => entry[0]);
+
+      // Get top 3 genres, padding with defaults if needed
+      const defaults = ['Action', 'Comedy', 'Drama'];
+      const top3 = [];
+      for (const g of sortedGenres) {
+        if (top3.length < 3 && !top3.includes(g)) {
+          top3.push(g);
+        }
+      }
+      for (const d of defaults) {
+        if (top3.length < 3 && !top3.includes(d)) {
+          top3.push(d);
+        }
+      }
+
+      setUserTopGenres(top3);
+
+      const map = {};
+      await Promise.all(top3.map(async (genre) => {
+        try {
+          const resGenre = await fetch(`${serverUrl}/Users/${userId}/Items?IncludeItemTypes=Movie&Recursive=true&Genres=${encodeURIComponent(genre)}&Limit=20&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+            headers: getHeaders()
+          });
+          if (resGenre.ok) {
+            const data = await resGenre.json();
+            map[genre] = data.Items || [];
+          }
+        } catch (e) {
+          console.error('Failed to fetch movies for genre', genre, e);
+        }
+      }));
+      setGenreMoviesMap(map);
+    } catch (err) {
+      console.error('Failed to fetch Top Genre Movies', err);
+    }
+  };
+
+  const fetchAllMoviesLatest = async () => {
+    try {
+      const res = await fetch(`${serverUrl}/Items?userId=${userId}&IncludeItemTypes=Movie&Recursive=true&SortBy=ProductionYear,PremiereDate,SortName&SortOrder=Descending&Limit=30&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAllMoviesLatest(data.Items || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch Latest Movies', err);
+    }
+  };
+
+  const handleSeeAllGenre = async (genreName) => {
+    setSelectedGenreView({ name: genreName, items: [], loading: true });
+    try {
+      let items = [];
+      if (genreName === 'All Movies') {
+        const res = await fetch(`${serverUrl}/Items?userId=${userId}&IncludeItemTypes=Movie&Recursive=true&SortBy=ProductionYear,PremiereDate,SortName&SortOrder=Descending&Limit=100&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+          headers: getHeaders()
+        });
+        if (res.ok) {
+          const data = await res.json();
+          items = data.Items || [];
+        }
+      } else {
+        const res = await fetch(`${serverUrl}/Items?userId=${userId}&IncludeItemTypes=Movie&Recursive=true&Genres=${encodeURIComponent(genreName)}&SortBy=SortName&SortOrder=Ascending&Limit=100&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+          headers: getHeaders()
+        });
+        if (res.ok) {
+          const data = await res.json();
+          items = data.Items || [];
+        }
+      }
+      setSelectedGenreView({ name: genreName, items, loading: false });
+    } catch (err) {
+      console.error('Failed to fetch see all movies', err);
+      setSelectedGenreView({ name: genreName, items: [], loading: false, error: true });
+    }
+  };
+
+  const fetchShowTopPicks = async () => {
+    try {
+      const res = await fetch(`${serverUrl}/Users/${userId}/Suggestions?Limit=40&IncludeItemTypes=Series&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const shows = (data.Items || []).filter(item => item.Type === 'Series').slice(0, 10);
+        setShowTopPicks(shows);
+      }
+    } catch (err) {
+      console.error('Failed to fetch TV Show Top Picks', err);
+    }
+  };
+
+  const fetchTopGenreShows = async () => {
+    try {
+      const [resCw, resFav, resRecent] = await Promise.all([
+        fetch(`${serverUrl}/Users/${userId}/Items/Resume?Limit=20&Recursive=true&IncludeItemTypes=Series,Episode&Fields=Genres`, { headers: getHeaders() }).then(r => r.ok ? r.json() : { Items: [] }),
+        fetch(`${serverUrl}/Users/${userId}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Series&Fields=Genres`, { headers: getHeaders() }).then(r => r.ok ? r.json() : { Items: [] }),
+        fetch(`${serverUrl}/Users/${userId}/Items?SortBy=DateCreated&SortOrder=Descending&Limit=30&IncludeItemTypes=Series&Recursive=true&Fields=Genres`, { headers: getHeaders() }).then(r => r.ok ? r.json() : { Items: [] })
+      ]);
+
+      const items = [...(resCw.Items || []), ...(resFav.Items || []), ...(resRecent.Items || [])];
+      const genreCounts = {};
+      items.forEach(item => {
+        if (item.Genres) {
+          item.Genres.forEach(genre => {
+            genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+          });
+        }
+      });
+
+      const sortedGenres = Object.entries(genreCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(entry => entry[0]);
+
+      const defaults = ['Action', 'Comedy', 'Drama'];
+      const top3 = [];
+      for (const g of sortedGenres) {
+        if (top3.length < 3 && !top3.includes(g)) {
+          top3.push(g);
+        }
+      }
+      for (const d of defaults) {
+        if (top3.length < 3 && !top3.includes(d)) {
+          top3.push(d);
+        }
+      }
+
+      setUserTopGenresSeries(top3);
+
+      const map = {};
+      await Promise.all(top3.map(async (genre) => {
+        try {
+          const resGenre = await fetch(`${serverUrl}/Items?userId=${userId}&IncludeItemTypes=Series&Recursive=true&Genres=${encodeURIComponent(genre)}&Limit=20&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+            headers: getHeaders()
+          });
+          if (resGenre.ok) {
+            const data = await resGenre.json();
+            map[genre] = data.Items || [];
+          }
+        } catch (e) {
+          console.error('Failed to fetch TV shows for genre', genre, e);
+        }
+      }));
+      setGenreShowsMap(map);
+    } catch (err) {
+      console.error('Failed to fetch Top Genre TV Shows', err);
+    }
+  };
+
+  const handleSeeAllGenreSeries = async (genreName) => {
+    setSelectedGenreViewSeries({ name: genreName, items: [], loading: true });
+    try {
+      let items = [];
+      if (genreName === 'All TV Shows') {
+        const res = await fetch(`${serverUrl}/Items?userId=${userId}&IncludeItemTypes=Series&Recursive=true&SortBy=ProductionYear,PremiereDate,SortName&SortOrder=Descending&Limit=100&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+          headers: getHeaders()
+        });
+        if (res.ok) {
+          const data = await res.json();
+          items = data.Items || [];
+        }
+      } else {
+        const res = await fetch(`${serverUrl}/Items?userId=${userId}&IncludeItemTypes=Series&Recursive=true&Genres=${encodeURIComponent(genreName)}&SortBy=SortName&SortOrder=Ascending&Limit=100&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+          headers: getHeaders()
+        });
+        if (res.ok) {
+          const data = await res.json();
+          items = data.Items || [];
+        }
+      }
+      setSelectedGenreViewSeries({ name: genreName, items, loading: false });
+    } catch (err) {
+      console.error('Failed to fetch see all TV shows', err);
+      setSelectedGenreViewSeries({ name: genreName, items: [], loading: false, error: true });
+    }
+  };
+
 
   const fetchCollections = async () => {
     try {
@@ -509,6 +946,41 @@ export default function App() {
         setFilteredGridItems(prev => prev.map(updateItem));
         setContinueWatching(prev => prev.map(updateItem));
         setSuggestions(prev => prev.map(updateItem));
+        setMovieTopPicks(prev => prev.map(updateItem));
+        setAllMoviesLatest(prev => prev.map(updateItem));
+        setShowTopPicks(prev => prev.map(updateItem));
+        if (selectedGenreView) {
+          setSelectedGenreView(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              items: prev.items.map(updateItem)
+            };
+          });
+        }
+        if (selectedGenreViewSeries) {
+          setSelectedGenreViewSeries(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              items: prev.items.map(updateItem)
+            };
+          });
+        }
+        setGenreMoviesMap(prev => {
+          const newMap = {};
+          Object.keys(prev).forEach(genre => {
+            newMap[genre] = prev[genre].map(updateItem);
+          });
+          return newMap;
+        });
+        setGenreShowsMap(prev => {
+          const newMap = {};
+          Object.keys(prev).forEach(genre => {
+            newMap[genre] = prev[genre].map(updateItem);
+          });
+          return newMap;
+        });
         setSimilarItems(prev => prev.map(updateItem));
         setCollections(prev => prev.map(updateItem));
         setCollectionItems(prev => prev.map(updateItem));
@@ -541,8 +1013,8 @@ export default function App() {
     const fetchRecentlyAdded = async () => {
       try {
         const [moviesRes, showsRes] = await Promise.all([
-          fetch(`${serverUrl}/Users/${userId}/Items?SortBy=DateCreated&SortOrder=Descending&Limit=20&IncludeItemTypes=Movie&Recursive=true&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, { headers: getHeaders() }),
-          fetch(`${serverUrl}/Users/${userId}/Items?SortBy=DateCreated&SortOrder=Descending&Limit=20&IncludeItemTypes=Series&Recursive=true&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, { headers: getHeaders() })
+          fetch(`${serverUrl}/Users/${userId}/Items?SortBy=DateCreated&SortOrder=Descending&Limit=20&IncludeItemTypes=Movie&Recursive=true&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData,Genres`, { headers: getHeaders() }),
+          fetch(`${serverUrl}/Users/${userId}/Items?SortBy=DateCreated&SortOrder=Descending&Limit=20&IncludeItemTypes=Series&Recursive=true&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData,Genres`, { headers: getHeaders() })
         ]);
 
         let movies = [];
@@ -573,11 +1045,49 @@ export default function App() {
           setBillboardItem(slideItems[0]);
           setBillboardIndex(0);
 
-          // Fetch first episode ID for series items to enable video clips
+          // Fetch trailer or video clip/episode details for all slide items
           slideItems.forEach(async (item) => {
-            if (item.Type === 'Series') {
+            try {
+              // 1. Try to fetch local trailers
+              const trailerRes = await fetch(`${serverUrl}/Users/${userId}/Items/${item.Id}/LocalTrailers`, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Emby-Authorization': `MediaBrowser Client="Zaflix", Device="Web", DeviceId="zaflix-web-client", Version="0.1.0", Token="${token}"`
+                }
+              });
+              if (trailerRes.ok) {
+                const trailerData = await trailerRes.json();
+                if (trailerData.Items && trailerData.Items.length > 0) {
+                  setBillboardVideoMap(prev => ({
+                    ...prev,
+                    [item.Id]: {
+                      videoId: trailerData.Items[0].Id,
+                      startTimeTicks: 0,
+                      isTrailer: true
+                    }
+                  }));
+                  return;
+                }
+              }
+            } catch (err) {
+              console.error('Failed to fetch local trailers for billboard:', item.Name, err);
+            }
+
+            // 2. Fallback if no local trailer is found
+            if (item.Type === 'Movie') {
+              const runTimeTicks = item.RunTimeTicks || 0;
+              const startTimeTicks = runTimeTicks > 0 ? Math.floor(runTimeTicks / 2) : 0;
+              setBillboardVideoMap(prev => ({
+                ...prev,
+                [item.Id]: {
+                  videoId: item.Id,
+                  startTimeTicks,
+                  isTrailer: false
+                }
+              }));
+            } else if (item.Type === 'Series') {
               try {
-                const epRes = await fetch(`${serverUrl}/Shows/${item.Id}/Episodes?limit=1&userId=${userId}`, {
+                const epRes = await fetch(`${serverUrl}/Shows/${item.Id}/Episodes?limit=1&userId=${userId}&Fields=RunTimeTicks`, {
                   headers: {
                     'Content-Type': 'application/json',
                     'X-Emby-Authorization': `MediaBrowser Client="Zaflix", Device="Web", DeviceId="zaflix-web-client", Version="0.1.0", Token="${token}"`
@@ -586,9 +1096,16 @@ export default function App() {
                 if (epRes.ok) {
                   const epData = await epRes.json();
                   if (epData.Items && epData.Items.length > 0) {
-                    setBillboardClipMap(prev => ({
+                    const episode = epData.Items[0];
+                    const runTimeTicks = episode.RunTimeTicks || 0;
+                    const startTimeTicks = runTimeTicks > 0 ? Math.floor(runTimeTicks / 2) : 0;
+                    setBillboardVideoMap(prev => ({
                       ...prev,
-                      [item.Id]: epData.Items[0].Id
+                      [item.Id]: {
+                        videoId: episode.Id,
+                        startTimeTicks,
+                        isTrailer: false
+                      }
                     }));
                   }
                 }
@@ -621,6 +1138,62 @@ export default function App() {
       fetchTopAnime(animeLibId);
     };
 
+    const fetchAvailableNetworks = async () => {
+      try {
+        const res = await fetch(`${serverUrl}/Studios?userId=${userId}&IncludeItemTypes=Series`, {
+          headers: getHeaders()
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const serverStudios = data.Items || [];
+          const matched = [];
+          
+          await Promise.all(serverStudios.map(async (studio) => {
+            try {
+              const checkRes = await fetch(`${serverUrl}/Users/${userId}/Items?IncludeItemTypes=Movie,Series&Recursive=true&Studios=${encodeURIComponent(studio.Name)}&Limit=3&Fields=Id`, {
+                headers: getHeaders()
+              });
+              if (checkRes.ok) {
+                const checkData = await checkRes.json();
+                if (checkData.Items && checkData.Items.length >= 3) {
+                  const nameLower = studio.Name.toLowerCase();
+                  const predefined = networks.find(p => 
+                    p.name.toLowerCase() === nameLower || 
+                    (p.studioName && p.studioName.toLowerCase() === nameLower) ||
+                    nameLower.includes(p.name.toLowerCase()) ||
+                    (p.studioName && nameLower.includes(p.studioName.toLowerCase()))
+                  );
+                  if (predefined) {
+                    if (!matched.some(m => m.name === predefined.name)) {
+                      matched.push(predefined);
+                    }
+                  } else {
+                    if (!matched.some(m => m.name === studio.Name)) {
+                      matched.push({
+                        name: studio.Name,
+                        className: 'network-generic',
+                        studioName: studio.Name,
+                        isGeneric: true
+                      });
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Failed to check content count for studio', studio.Name, e);
+            }
+          }));
+          
+          setAvailableNetworks(matched);
+        } else {
+          setAvailableNetworks(networks);
+        }
+      } catch (err) {
+        console.error('Failed to fetch studios', err);
+        setAvailableNetworks(networks);
+      }
+    };
+
     fetchTopMovies();
     fetchTopShows();
     initAnime();
@@ -629,7 +1202,18 @@ export default function App() {
     fetchMyList();
     fetchSuggestions();
     fetchCollections();
+    fetchAvailableNetworks();
+    fetchMovieTopPicks();
+    fetchTopGenreMovies();
+    fetchAllMoviesLatest();
+    fetchShowTopPicks();
+    fetchTopGenreShows();
   }, [isConnected, serverUrl, userId, token, refreshTrigger]);
+
+  useEffect(() => {
+    setSelectedGenreView(null);
+    setSelectedGenreViewSeries(null);
+  }, [filterType]);
 
 
 
@@ -658,7 +1242,7 @@ export default function App() {
     // Auto-advance interval
     const intervalTimer = setInterval(() => {
       setBillboardIndex(prev => (prev + 1) % billboardItems.length);
-    }, 15000); // cycle every 15 seconds
+    }, 30000); // cycle every 30 seconds
 
     return () => {
       clearTimeout(delayTimer);
@@ -676,8 +1260,28 @@ export default function App() {
 
     const fetchFiltered = async () => {
       try {
+        if (filterType === 'Network' && selectedNetwork) {
+          const networkObj = networks.find(p => p.name === selectedNetwork);
+          const studioQueryName = networkObj ? (networkObj.studioName || networkObj.name) : selectedNetwork;
+          
+          let itemTypes = 'Movie,Series';
+          if (networkOrigin === 'Movie') {
+            itemTypes = 'Movie';
+          } else if (networkOrigin === 'Series') {
+            itemTypes = 'Series';
+          }
+          
+          const res = await fetch(`${serverUrl}/Users/${userId}/Items?IncludeItemTypes=${itemTypes}&Recursive=true&Studios=${encodeURIComponent(studioQueryName)}&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+            headers: getHeaders()
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setFilteredGridItems(data.Items || []);
+          }
+          return;
+        }
         if (filterType === 'MyList') {
-          const res = await fetch(`${serverUrl}/Users/${userId}/Items?Filters=IsFavorite&Recursive=true&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+          const res = await fetch(`${serverUrl}/Items?Filters=IsFavorite&Recursive=true&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
             headers: getHeaders()
           });
           if (res.ok) {
@@ -740,7 +1344,13 @@ export default function App() {
       }
     };
     fetchFiltered();
-  }, [filterType, isConnected, serverUrl, token, userId, animeLibraryId, refreshTrigger]);
+  }, [filterType, selectedNetwork, isConnected, serverUrl, token, userId, animeLibraryId, refreshTrigger]);
+
+  useEffect(() => {
+    if (filterType !== 'Network') {
+      setSelectedNetwork(null);
+    }
+  }, [filterType]);
 
 
 
@@ -796,7 +1406,13 @@ export default function App() {
 
     if (item.Type === 'BoxSet') {
       setCollectionItems([]);
-      fetch(`${serverUrl}/Items?ParentId=${item.Id}&userId=${userId}&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
+      let includeTypes = 'Movie,Series';
+      if (filterType === 'Movie') {
+        includeTypes = 'Movie';
+      } else if (filterType === 'Series') {
+        includeTypes = 'Series';
+      }
+      fetch(`${serverUrl}/Items?ParentId=${item.Id}&userId=${userId}&IncludeItemTypes=${includeTypes}&Fields=Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData`, {
         headers: getHeaders()
       })
       .then(res => res.json())
@@ -966,7 +1582,110 @@ export default function App() {
       video.removeEventListener('pause', onPause);
       video.removeEventListener('loadedmetadata', onLoadedMetadata);
     };
-  }, [activePlayback, videoQuality]);
+  }, [activePlayback]);
+
+  // Fetch active item audio and subtitle streams
+  useEffect(() => {
+    if (!activePlayback || !isConnected) return;
+    
+    const fetchPlaybackInfo = async () => {
+      try {
+        const res = await fetch(`${serverUrl}/Users/${userId}/Items/${activePlayback.id}`, {
+          headers: getHeaders()
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const mediaSource = data.MediaSources?.[0];
+          if (mediaSource) {
+            const streams = mediaSource.MediaStreams || [];
+            
+            const audios = streams.filter(s => s.Type === 'Audio');
+            const subtitles = streams.filter(s => s.Type === 'Subtitle');
+            
+            setAudioStreams(audios);
+            setSubtitleStreams(subtitles);
+            
+            // Set default audio index
+            const defaultAudio = audios.find(s => s.IsDefault) || audios[0];
+            if (defaultAudio && selectedAudioIndex === null) {
+              setSelectedAudioIndex(defaultAudio.Index);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch media streams:', err);
+      }
+    };
+    
+    fetchPlaybackInfo();
+  }, [activePlayback, isConnected]);
+
+  // Keep HTML5 video volume and muted properties in sync
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.volume = volume;
+      videoRef.current.muted = isMuted;
+    }
+  }, [activePlayback, volume, isMuted]);
+
+  // Ensure subtitle mode is active immediately
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    for (let i = 0; i < video.textTracks.length; i++) {
+      video.textTracks[i].mode = 'showing';
+    }
+  }, [selectedSubtitleIndex]);
+
+  // Set up Direct Play or Low Resolution streaming URL
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !activePlayback) return;
+
+    let streamUrl = '';
+    if (videoQuality === 'direct') {
+      streamUrl = `${serverUrl}/Videos/${activePlayback.id}/stream?static=true&api_key=${token}`;
+    } else {
+      // progressive MP4 transcoding to 480p (low resolution)
+      streamUrl = `${serverUrl}/Videos/${activePlayback.id}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=854&maxHeight=480&VideoBitrate=800000&api_key=${token}`;
+    }
+
+    if (selectedAudioIndex !== null) {
+      streamUrl += `&AudioStreamIndex=${selectedAudioIndex}`;
+    }
+
+    // Save current time position to resume playback correctly when switching quality
+    const prevTime = video.currentTime;
+    video.src = streamUrl;
+
+    const restoreTime = () => {
+      if (prevTime > 0) {
+        video.currentTime = prevTime;
+      }
+      video.play().catch(e => console.log('Playback start prevented', e));
+      video.removeEventListener('loadedmetadata', restoreTime);
+    };
+    video.addEventListener('loadedmetadata', restoreTime);
+  }, [activePlayback, videoQuality, selectedAudioIndex, serverUrl, token]);
+
+  const handleProgressBarMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = Math.min(Math.max(0, (e.clientX - rect.left) / rect.width), 1);
+    const targetSecs = percent * duration;
+    setHoverTime(targetSecs);
+    setHoverX(e.clientX - rect.left);
+    
+    if (activePlayback) {
+      const ticks = Math.round(targetSecs * 10000000);
+      const previewUrl = getImageUrl(activePlayback.id, 'Primary', '', ticks);
+      setHoverImageSrc(previewUrl);
+    }
+  };
+
+  const handleProgressBarMouseLeave = () => {
+    setHoverTime(null);
+  };
+
 
   // Auto hide controls logic
   const handleMouseMove = () => {
@@ -1021,19 +1740,41 @@ export default function App() {
     }
   };
 
+  const handleVideoClick = (e) => {
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || isMobile;
+    if (isTouch) {
+      e.preventDefault();
+      e.stopPropagation();
+      setShowControls(prev => {
+        const next = !prev;
+        if (next) {
+          if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+          controlsTimeoutRef.current = setTimeout(() => {
+            if (videoRef.current && !videoRef.current.paused) setShowControls(false);
+          }, 4000);
+        }
+        return next;
+      });
+    } else {
+      handlePlayPause();
+    }
+  };
+
+  const handleTouchSeek = (e) => {
+    if (!videoRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.touches[0];
+    const clickPct = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+    videoRef.current.currentTime = clickPct * duration;
+  };
+
+
   const handleSkip = (seconds) => {
     if (!videoRef.current) return;
     videoRef.current.currentTime = Math.min(
       Math.max(0, videoRef.current.currentTime + seconds),
       duration
     );
-  };
-
-  const changeQuality = (quality) => {
-    if (!videoRef.current) return;
-    const time = videoRef.current.currentTime;
-    seekTargetTimeRef.current = time;
-    setVideoQuality(quality);
   };
 
   const handleVolumeChange = (e) => {
@@ -1069,13 +1810,61 @@ export default function App() {
     }
   };
 
+  const changeQuality = (quality) => {
+    if (!videoRef.current) return;
+    const time = videoRef.current.currentTime;
+    seekTargetTimeRef.current = time;
+    setVideoQuality(quality);
+  };
+
+  const toggleAspectRatio = () => {
+    setAspectRatio(prev => {
+      if (prev === 'contain') return 'cover';
+      if (prev === 'cover') return 'fill';
+      return 'contain';
+    });
+  };
+
   useEffect(() => {
     const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isFs = !!document.fullscreenElement;
+      setIsFullscreen(isFs);
+      if (isFs) {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(e => console.log('Screen orientation lock prevented:', e));
+        }
+      } else {
+        if (screen.orientation && screen.orientation.unlock) {
+          screen.orientation.unlock();
+        }
+      }
     };
     document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, []);
+
+    // Auto enter fullscreen & rotate to landscape on mobile/tablet when activePlayback starts
+    if (activePlayback && (isMobile || ('ontouchstart' in window) || navigator.maxTouchPoints > 0)) {
+      const timer = setTimeout(async () => {
+        try {
+          if (playerContainerRef.current && !document.fullscreenElement) {
+            await playerContainerRef.current.requestFullscreen();
+          }
+          if (screen.orientation && screen.orientation.lock) {
+            await screen.orientation.lock('landscape');
+          }
+        } catch (err) {
+          console.log('Auto-fullscreen or orientation lock prevented/unsupported:', err);
+        }
+      }, 150);
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('fullscreenchange', handleFsChange);
+      };
+    }
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+    };
+  }, [activePlayback, isMobile]);
 
   // Auto-refresh cache and content every 1 hour (3,600,000 ms)
   useEffect(() => {
@@ -1111,10 +1900,33 @@ export default function App() {
     const container = document.getElementById(id);
     if (!container) return;
     const scrollAmount = container.clientWidth * 0.8;
-    container.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth'
-    });
+    const maxScroll = container.scrollWidth - container.clientWidth;
+    
+    if (direction === 'left') {
+      if (container.scrollLeft <= 5) {
+        container.scrollTo({
+          left: maxScroll,
+          behavior: 'smooth'
+        });
+      } else {
+        container.scrollBy({
+          left: -scrollAmount,
+          behavior: 'smooth'
+        });
+      }
+    } else {
+      if (container.scrollLeft >= maxScroll - 5) {
+        container.scrollTo({
+          left: 0,
+          behavior: 'smooth'
+        });
+      } else {
+        container.scrollBy({
+          left: scrollAmount,
+          behavior: 'smooth'
+        });
+      }
+    }
   };
 
   return (
@@ -1152,26 +1964,6 @@ export default function App() {
               </svg>
               <span>ZAFLIX</span>
             </h1>
-            
-            <div className="flex justify-center gap-4 mb-6" style={{ display: 'flex', gap: '15px', marginBottom: '20px', justifyContent: 'center' }}>
-              <button 
-                type="button" 
-                className={`btn ${authMethod === 'token' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-                onClick={() => setAuthMethod('token')}
-              >
-                API Token
-              </button>
-              <button 
-                type="button" 
-                className={`btn ${authMethod === 'login' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-                onClick={() => setAuthMethod('login')}
-              >
-                User Login
-              </button>
-            </div>
-
             <form onSubmit={handleConnect}>
               <div className="form-group">
                 <label className="form-label">Jellyfin Server URL</label>
@@ -1185,56 +1977,27 @@ export default function App() {
                 />
               </div>
 
-              {authMethod === 'token' ? (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">User ID</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="Jellyfin User ID hex string" 
-                      value={formUserId} 
-                      onChange={(e) => setFormUserId(e.target.value)} 
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Access Token / API Key</label>
-                    <input 
-                      type="password" 
-                      className="form-input" 
-                      placeholder="Access Token" 
-                      value={formToken} 
-                      onChange={(e) => setFormToken(e.target.value)} 
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Username</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="Jellyfin Username" 
-                      value={formUsername} 
-                      onChange={(e) => setFormUsername(e.target.value)} 
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Password</label>
-                    <input 
-                      type="password" 
-                      className="form-input" 
-                      placeholder="Password" 
-                      value={formPassword} 
-                      onChange={(e) => setFormPassword(e.target.value)} 
-                    />
-                  </div>
-                </>
-              )}
+              <div className="form-group">
+                <label className="form-label">Username</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="Jellyfin Username" 
+                  value={formUsername} 
+                  onChange={(e) => setFormUsername(e.target.value)} 
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <input 
+                  type="password" 
+                  className="form-input" 
+                  placeholder="Password" 
+                  value={formPassword} 
+                  onChange={(e) => setFormPassword(e.target.value)} 
+                />
+              </div>
 
               {errorMsg && (
                 <div style={{ color: '#e50914', fontSize: '0.85rem', marginBottom: '15px', fontWeight: 600 }}>
@@ -1325,21 +2088,21 @@ export default function App() {
               onClick={() => setFilterType('Movie')}
             >
               <Film size={14} style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline' }} />
-              Movies Only
+              Movies
             </button>
             <button 
               className={`filter-chip ${filterType === 'Series' ? 'active' : ''}`} 
               onClick={() => setFilterType('Series')}
             >
               <Tv size={14} style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline' }} />
-              TV Shows Only
+              TV Shows
             </button>
             <button 
               className={`filter-chip ${filterType === 'Anime' ? 'active' : ''}`} 
               onClick={() => setFilterType('Anime')}
             >
               <Sparkles size={14} style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline' }} />
-              Anime Only
+              Anime
             </button>
             <button 
               className={`filter-chip ${filterType === 'MyList' ? 'active' : ''}`} 
@@ -1359,113 +2122,266 @@ export default function App() {
 
 
 
-          {/* Conditionally render sliders OR isolate grids */}
-          {filterType === 'All' ? (
+          {/* Conditionally render sliders OR network grid OR isolate grids */}
+          {filterType === 'Network' ? (
+            <div className="network-view">
+              <div className="network-header-container">
+                <h1 className="network-header-title">
+                  <span>{selectedNetwork} Collection</span>
+                </h1>
+                <button className="btn-back" onClick={() => setFilterType('All')}>
+                  <ChevronLeft size={16} /> Back to Home
+                </button>
+              </div>
+              <div className="grid-container">
+                {filteredGridItems.length > 0 ? (
+                  filteredGridItems.map((item) => {
+                    const cardClass = isMobile ? "card" : "card horizontal";
+                    const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                    return (
+                      <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                        <img 
+                          className="card-img" 
+                          src={imageSrc} 
+                          alt={item.Name} 
+                          loading="lazy"
+                        />
+                        {previewActiveId === item.Id && (
+                          <video
+                            className="card-preview-video"
+                            src={getPreviewStreamUrl(item)}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                          />
+                        )}
+                        {!isMobile && (
+                          <div className="card-title-overlay">
+                            {item.ImageTags && item.ImageTags.Logo ? (
+                              <img 
+                                className="card-logo" 
+                                src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                alt={item.Name} 
+                              />
+                            ) : (
+                              <span className="card-text-title">{item.Name}</span>
+                            )}
+                          </div>
+                        )}
+                        <div className="card-details">
+                          <p className="card-title">{item.Name}</p>
+                          <div className="card-meta">
+                            {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                            <span>{item.ProductionYear}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="no-content-message" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
+                    No content found on {selectedNetwork}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : filterType === 'All' ? (
             <>
               {/* Hero Banner Billboard */}
               {billboardItem && (
-                <div 
-                  className="billboard"
-                  style={{ backgroundImage: `url(${getImageUrl(billboardItem.Id, 'Backdrop')})` }}
-                >
-                  {/* Background Video Preview Clip */}
-                  {playClip && (billboardItem.Type === 'Movie' || billboardClipMap[billboardItem.Id]) && (
-                    <video
-                      key={billboardItem.Id}
-                      className="billboard-video"
-                      src={`${serverUrl}/Videos/${billboardItem.Type === 'Movie' ? billboardItem.Id : billboardClipMap[billboardItem.Id]}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=854&maxHeight=480&VideoBitrate=800000&api_key=${token}`}
-                      autoPlay
-                      loop
-                      muted={isClipMuted}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        zIndex: 1
-                      }}
-                    />
-                  )}
-
-                  {/* Slideshow Control Arrows */}
-                  {billboardItems.length > 1 && (
-                    <>
-                      <button 
-                        className="btn-secondary" 
-                        onClick={(e) => { e.stopPropagation(); setBillboardIndex(prev => (prev - 1 + billboardItems.length) % billboardItems.length); }}
-                        style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, border: 'none', background: 'rgba(0,0,0,0.4)', color: '#fff', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                      >
-                        <ChevronLeft size={28} />
-                      </button>
-                      <button 
-                        className="btn-secondary" 
-                        onClick={(e) => { e.stopPropagation(); setBillboardIndex(prev => (prev + 1) % billboardItems.length); }}
-                        style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, border: 'none', background: 'rgba(0,0,0,0.4)', color: '#fff', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                      >
-                        <ChevronRight size={28} />
-                      </button>
-                    </>
-                  )}
-
-                  {/* Volume Control Mute/Unmute */}
-                  {playClip && (billboardItem.Type === 'Movie' || billboardClipMap[billboardItem.Id]) && (
-                    <button 
-                      className="btn-secondary"
-                      onClick={(e) => { e.stopPropagation(); setIsClipMuted(!isClipMuted); }}
-                      style={{ position: 'absolute', bottom: '30px', right: '4%', zIndex: 10, border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(0,0,0,0.5)', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                    >
-                      {isClipMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                    </button>
-                  )}
-
-                  <div className="billboard-content">
-                    {billboardItem.ImageTags && billboardItem.ImageTags.Logo ? (
+                isMobile ? (
+                  <div 
+                    className="billboard mobile-billboard"
+                    onClick={() => handleItemClick(billboardItem)}
+                  >
+                    <div className="mobile-poster-card">
                       <img 
-                        className="billboard-title-logo"
-                        src={`${serverUrl}/Items/${billboardItem.Id}/Images/Logo?maxHeight=120`}
+                        className="mobile-poster-img"
+                        src={getImageUrl(billboardItem.Id, 'Primary')}
                         alt={billboardItem.Name}
-                        style={{ 
-                          maxHeight: '120px', 
-                          maxWidth: '80%', 
-                          objectFit: 'contain', 
-                          marginBottom: '20px',
-                          display: 'block'
-                        }}
                       />
-                    ) : (
-                      <h1 className="billboard-title">{billboardItem.Name}</h1>
-                    )}
+                      <div className="mobile-card-brand">
+                        <svg className="brand-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style={{ width: '24px', height: '24px' }}>
+                          <path d="M 28 64 L 80 64 L 80 80 L 20 80 Z" fill="url(#navBottomGrad)" />
+                          <path d="M 80 20 L 72 36 L 20 80 L 28 64 Z" fill="url(#navDiagGrad)" filter="url(#navShadow)" />
+                          <path d="M 20 20 L 80 20 L 72 36 L 20 36 Z" fill="url(#navTopGrad)" filter="url(#navShadow)" />
+                        </svg>
+                      </div>
+                      <div className="mobile-card-overlay">
+                        {billboardItem.ImageTags && billboardItem.ImageTags.Logo ? (
+                          <img 
+                            className="billboard-title-logo mobile-logo"
+                            src={`${serverUrl}/Items/${billboardItem.Id}/Images/Logo?maxHeight=50`}
+                            alt={billboardItem.Name}
+                          />
+                        ) : (
+                          <h1 className="billboard-title mobile-title">{billboardItem.Name}</h1>
+                        )}
 
-                    <p className="billboard-synopsis">
-                      {billboardItem.Overview ? (billboardItem.Overview.substring(0, 180) + '...') : 'A Premium streaming item from your Jellyfin server.'}
-                    </p>
-                    <div className="billboard-actions">
+                        {billboardItem.Genres && billboardItem.Genres.length > 0 && (
+                          <div className="mobile-genres">
+                            {billboardItem.Genres.slice(0, 3).join('  ·  ')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mobile-actions" onClick={(e) => e.stopPropagation()}>
                       <button 
-                        className="btn btn-primary"
+                        className="mobile-btn btn-play"
                         onClick={() => {
                           if (billboardItem.Type === 'Series') {
                             handleItemClick(billboardItem);
                           } else {
-                             handlePlayMedia(billboardItem.Id, billboardItem.Name, billboardItem.ProductionYear || '', false, [], 0, billboardItem.RunTimeTicks, billboardItem.UserData?.PlaybackPositionTicks || 0);
+                            handlePlayMedia(billboardItem.Id, billboardItem.Name, billboardItem.ProductionYear || '', false, [], 0, billboardItem.RunTimeTicks, billboardItem.UserData?.PlaybackPositionTicks || 0);
                           }
                         }}
                       >
-                        <Play fill="#fff" size={16} /> Play
+                        <Play fill="#000" size={16} /> Play
                       </button>
                       <button 
-                        className="btn btn-secondary"
+                        className="mobile-btn btn-mylist"
                         onClick={(e) => { e.stopPropagation(); toggleFavorite(billboardItem); }}
                       >
                         {billboardItem.UserData?.IsFavorite ? <Check size={16} /> : <Plus size={16} />}
-                        {billboardItem.UserData?.IsFavorite ? 'In My List' : 'My List'}
-                      </button>
-                      <button className="btn btn-secondary" onClick={() => handleItemClick(billboardItem)}>
-                        <Info size={16} /> More Info
+                        My List
                       </button>
                     </div>
+                  </div>
+                ) : (
+                  <div 
+                    className="billboard"
+                    style={{ backgroundImage: `url(${getImageUrl(billboardItem.Id, 'Backdrop')})` }}
+                  >
+                    {/* Background Video Preview Clip */}
+                    {playClip && billboardVideoMap[billboardItem.Id] && (
+                      <video
+                        key={billboardItem.Id}
+                        className="billboard-video"
+                        src={`${serverUrl}/Videos/${billboardVideoMap[billboardItem.Id].videoId}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=854&maxHeight=480&VideoBitrate=800000&StartTimeTicks=${billboardVideoMap[billboardItem.Id].startTimeTicks}&api_key=${token}`}
+                        autoPlay
+                        loop
+                        muted={isClipMuted}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          zIndex: 1
+                        }}
+                      />
+                    )}
 
+                    {/* Slideshow Control Arrows */}
+                    {billboardItems.length > 1 && (
+                      <>
+                        <button 
+                          className="btn-secondary" 
+                          onClick={(e) => { e.stopPropagation(); setBillboardIndex(prev => (prev - 1 + billboardItems.length) % billboardItems.length); }}
+                          style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, border: 'none', background: 'rgba(0,0,0,0.4)', color: '#fff', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        >
+                          <ChevronLeft size={28} />
+                        </button>
+                        <button 
+                          className="btn-secondary" 
+                          onClick={(e) => { e.stopPropagation(); setBillboardIndex(prev => (prev + 1) % billboardItems.length); }}
+                          style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, border: 'none', background: 'rgba(0,0,0,0.4)', color: '#fff', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        >
+                          <ChevronRight size={28} />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Volume Control Mute/Unmute */}
+                    {playClip && billboardVideoMap[billboardItem.Id] && (
+                      <button 
+                        className="btn-secondary"
+                        onClick={(e) => { e.stopPropagation(); setIsClipMuted(!isClipMuted); }}
+                        style={{ position: 'absolute', bottom: '30px', right: '4%', zIndex: 10, border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(0,0,0,0.5)', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      >
+                        {isClipMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                      </button>
+                    )}
+
+                    <div className="billboard-content">
+                      {billboardItem.ImageTags && billboardItem.ImageTags.Logo ? (
+                        <img 
+                          className="billboard-title-logo"
+                          src={`${serverUrl}/Items/${billboardItem.Id}/Images/Logo?maxHeight=120`}
+                          alt={billboardItem.Name}
+                          style={{ 
+                            maxHeight: '120px', 
+                            maxWidth: '80%', 
+                            objectFit: 'contain', 
+                            marginBottom: '20px',
+                            display: 'block'
+                          }}
+                        />
+                      ) : (
+                        <h1 className="billboard-title">{billboardItem.Name}</h1>
+                      )}
+
+                      <p className="billboard-synopsis">
+                        {billboardItem.Overview ? (billboardItem.Overview.substring(0, 180) + '...') : 'A Premium streaming item from your Jellyfin server.'}
+                      </p>
+                      <div className="billboard-actions">
+                        <button 
+                          className="btn btn-primary"
+                          onClick={() => {
+                            if (billboardItem.Type === 'Series') {
+                              handleItemClick(billboardItem);
+                            } else {
+                               handlePlayMedia(billboardItem.Id, billboardItem.Name, billboardItem.ProductionYear || '', false, [], 0, billboardItem.RunTimeTicks, billboardItem.UserData?.PlaybackPositionTicks || 0);
+                            }
+                          }}
+                        >
+                          <Play fill="#fff" size={16} /> Play
+                        </button>
+                        <button 
+                          className="btn btn-secondary"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(billboardItem); }}
+                        >
+                          {billboardItem.UserData?.IsFavorite ? <Check size={16} /> : <Plus size={16} />}
+                          {billboardItem.UserData?.IsFavorite ? 'In My List' : 'My List'}
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => handleItemClick(billboardItem)}>
+                          <Info size={16} /> More Info
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                )
+              )}
+
+              {/* Slider: Networks */}
+              {/* Slider: Networks */}
+              {(availableNetworks.length > 0 ? availableNetworks : networks).length > 0 && (
+                <div className="row">
+                  <h2 className="row-header">Featured Networks</h2>
+                  <div className="slider-wrapper">
+                    <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-networks', 'left')}>
+                      <ChevronLeft size={30} />
+                    </button>
+                    <div className="slider-container" id="slider-networks">
+                      {(availableNetworks.length > 0 ? availableNetworks : networks).map((network) => (
+                        <div 
+                          key={network.name} 
+                          className={`network-card ${network.className}`}
+                          onClick={() => handleNetworkClick(network, 'All')}
+                        >
+                          <div className="network-card-content">
+                            {network.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-networks', 'right')}>
+                      <ChevronRight size={30} />
+                    </button>
                   </div>
                 </div>
               )}
@@ -1487,12 +2403,19 @@ export default function App() {
                           } else {
                             handleItemClick(item);
                           }
-                        }} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave} style={{ position: 'relative' }}>
+                        }} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave} style={{ position: 'relative' }}>
                           <img 
                             className="card-img" 
                             src={item.Type === 'Episode' ? getImageUrl(item.Id, 'Primary', '', item.UserData?.PlaybackPositionTicks) : getImageUrl(item.Id, 'Backdrop', '', item.UserData?.PlaybackPositionTicks)} 
                             alt={item.Name} 
                             loading="lazy"
+                            onError={(e) => {
+                              if (item.Type === 'Episode' && item.SeriesId) {
+                                e.target.src = getImageUrl(item.SeriesId, 'Backdrop');
+                              } else {
+                                e.target.src = getImageUrl(item.Id, 'Primary');
+                              }
+                            }}
                           />
                           {previewActiveId === item.Id && (
                             <video
@@ -1572,44 +2495,50 @@ export default function App() {
                       <ChevronLeft size={30} />
                     </button>
                     <div className="slider-container" id="slider-suggestions">
-                      {suggestions.map((item) => (
-                        <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                          <img 
-                            className="card-img" 
-                            src={getImageUrl(item.Id, 'Backdrop')} 
-                            alt={item.Name} 
-                            loading="lazy"
-                          />
-                          {previewActiveId === item.Id && (
-                            <video
-                              className="card-preview-video"
-                              src={getPreviewStreamUrl(item)}
-                              autoPlay
-                              muted
-                              loop
-                              playsInline
+                      {suggestions.map((item) => {
+                        const cardClass = isMobile ? "card" : "card horizontal";
+                        const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                        return (
+                          <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                            <img 
+                              className="card-img" 
+                              src={imageSrc} 
+                              alt={item.Name} 
+                              loading="lazy"
                             />
-                          )}
-                          <div className="card-title-overlay">
-                            {item.ImageTags && item.ImageTags.Logo ? (
-                              <img 
-                                className="card-logo" 
-                                src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
-                                alt={item.Name} 
+                            {previewActiveId === item.Id && (
+                              <video
+                                className="card-preview-video"
+                                src={getPreviewStreamUrl(item)}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
                               />
-                            ) : (
-                              <span className="card-text-title">{item.Name}</span>
                             )}
-                          </div>
-                          <div className="card-details">
-                            <p className="card-title">{item.Name}</p>
-                            <div className="card-meta">
+                            {!isMobile && (
+                              <div className="card-title-overlay">
+                                {item.ImageTags && item.ImageTags.Logo ? (
+                                  <img 
+                                    className="card-logo" 
+                                    src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                    alt={item.Name} 
+                                  />
+                                ) : (
+                                  <span className="card-text-title">{item.Name}</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="card-details">
+                              <p className="card-title">{item.Name}</p>
+                              <div className="card-meta">
                               {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
                               <span>{item.ProductionYear}</span>
                             </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-suggestions', 'right')}>
                       <ChevronRight size={30} />
@@ -1627,44 +2556,50 @@ export default function App() {
                       <ChevronLeft size={30} />
                     </button>
                     <div className="slider-container" id="slider-mylist">
-                      {myList.map((item) => (
-                        <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                          <img 
-                            className="card-img" 
-                            src={getImageUrl(item.Id, 'Backdrop')} 
-                            alt={item.Name} 
-                            loading="lazy"
-                          />
-                          {previewActiveId === item.Id && (
-                            <video
-                              className="card-preview-video"
-                              src={getPreviewStreamUrl(item)}
-                              autoPlay
-                              muted
-                              loop
-                              playsInline
+                      {myList.map((item) => {
+                        const cardClass = isMobile ? "card" : "card horizontal";
+                        const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                        return (
+                          <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                            <img 
+                              className="card-img" 
+                              src={imageSrc} 
+                              alt={item.Name} 
+                              loading="lazy"
                             />
-                          )}
-                          <div className="card-title-overlay">
-                            {item.ImageTags && item.ImageTags.Logo ? (
-                              <img 
-                                className="card-logo" 
-                                src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
-                                alt={item.Name} 
+                            {previewActiveId === item.Id && (
+                              <video
+                                className="card-preview-video"
+                                src={getPreviewStreamUrl(item)}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
                               />
-                            ) : (
-                              <span className="card-text-title">{item.Name}</span>
                             )}
-                          </div>
-                          <div className="card-details">
-                            <p className="card-title">{item.Name}</p>
-                            <div className="card-meta">
+                            {!isMobile && (
+                              <div className="card-title-overlay">
+                                {item.ImageTags && item.ImageTags.Logo ? (
+                                  <img 
+                                    className="card-logo" 
+                                    src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                    alt={item.Name} 
+                                  />
+                                ) : (
+                                  <span className="card-text-title">{item.Name}</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="card-details">
+                              <p className="card-title">{item.Name}</p>
+                              <div className="card-meta">
                               {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
                               <span>{item.ProductionYear}</span>
                             </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-mylist', 'right')}>
                       <ChevronRight size={30} />
@@ -1682,43 +2617,49 @@ export default function App() {
                       <ChevronLeft size={30} />
                     </button>
                     <div className="slider-container" id="slider-collections">
-                      {collections.map((item) => (
-                        <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                          <img 
-                            className="card-img" 
-                            src={getImageUrl(item.Id, 'Backdrop')} 
-                            alt={item.Name} 
-                            loading="lazy"
-                          />
-                          {previewActiveId === item.Id && (
-                            <video
-                              className="card-preview-video"
-                              src={getPreviewStreamUrl(item)}
-                              autoPlay
-                              muted
-                              loop
-                              playsInline
+                      {collections.map((item) => {
+                        const cardClass = isMobile ? "card" : "card horizontal";
+                        const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                        return (
+                          <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                            <img 
+                              className="card-img" 
+                              src={imageSrc} 
+                              alt={item.Name} 
+                              loading="lazy"
                             />
-                          )}
-                          <div className="card-title-overlay">
-                            {item.ImageTags && item.ImageTags.Logo ? (
-                              <img 
-                                className="card-logo" 
-                                src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
-                                alt={item.Name} 
+                            {previewActiveId === item.Id && (
+                              <video
+                                className="card-preview-video"
+                                src={getPreviewStreamUrl(item)}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
                               />
-                            ) : (
-                              <span className="card-text-title">{item.Name}</span>
                             )}
-                          </div>
-                          <div className="card-details">
-                            <p className="card-title">{item.Name}</p>
-                            <div className="card-meta">
+                            {!isMobile && (
+                              <div className="card-title-overlay">
+                                {item.ImageTags && item.ImageTags.Logo ? (
+                                  <img 
+                                    className="card-logo" 
+                                    src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                    alt={item.Name} 
+                                  />
+                                ) : (
+                                  <span className="card-text-title">{item.Name}</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="card-details">
+                              <p className="card-title">{item.Name}</p>
+                              <div className="card-meta">
                               <span>Collection</span>
                             </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-collections', 'right')}>
                       <ChevronRight size={30} />
@@ -1730,50 +2671,61 @@ export default function App() {
               {/* Slider: Top Movies */}
 
               <div className="row">
-                <h2 className="row-header">Top Movies</h2>
+                <h2 className="row-header">Top 10 Movies</h2>
                 <div className="slider-wrapper">
                   <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-top-movies', 'left')}>
                     <ChevronLeft size={30} />
                   </button>
                   <div className="slider-container" id="slider-top-movies">
-                    {topMovies.map((item) => (
-                      <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                        <img 
-                          className="card-img" 
-                          src={getImageUrl(item.Id, 'Backdrop')} 
-                          alt={item.Name} 
-                          loading="lazy"
-                        />
-                        {previewActiveId === item.Id && (
-                          <video
-                            className="card-preview-video"
-                            src={getPreviewStreamUrl(item)}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                          />
-                        )}
-                        <div className="card-title-overlay">
-                          {item.ImageTags && item.ImageTags.Logo ? (
+                    {topMovies.slice(0, 10).map((item, index) => {
+                      const cardClass = isMobile ? "card top10-card" : "card horizontal top10-card";
+                      const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                      return (
+                        <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave} style={{ position: 'relative', display: 'flex', alignItems: 'stretch' }}>
+                          <div className="top10-rank-container">
+                            <span className="top10-rank-number">{index + 1}</span>
+                          </div>
+                          <div className="top10-card-inner" style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
                             <img 
-                              className="card-logo" 
-                              src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                              className="card-img" 
+                              src={imageSrc} 
                               alt={item.Name} 
+                              loading="lazy"
                             />
-                          ) : (
-                            <span className="card-text-title">{item.Name}</span>
-                          )}
-                        </div>
-                        <div className="card-details">
-                          <p className="card-title">{item.Name}</p>
-                          <div className="card-meta">
-                            <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
-                            <span>{item.ProductionYear}</span>
+                            {previewActiveId === item.Id && (
+                              <video
+                                className="card-preview-video"
+                                src={getPreviewStreamUrl(item)}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                              />
+                            )}
+                            {!isMobile && (
+                              <div className="card-title-overlay">
+                                {item.ImageTags && item.ImageTags.Logo ? (
+                                  <img 
+                                    className="card-logo" 
+                                    src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                    alt={item.Name} 
+                                  />
+                                ) : (
+                                  <span className="card-text-title">{item.Name}</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="card-details">
+                              <p className="card-title">{item.Name}</p>
+                              <div className="card-meta">
+                                <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                <span>{item.ProductionYear}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-top-movies', 'right')}>
                     <ChevronRight size={30} />
@@ -1783,50 +2735,61 @@ export default function App() {
 
               {/* Slider: Top TV Shows */}
               <div className="row">
-                <h2 className="row-header">Top TV Shows</h2>
+                <h2 className="row-header">Top 10 TV Shows</h2>
                 <div className="slider-wrapper">
                   <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-top-shows', 'left')}>
                     <ChevronLeft size={30} />
                   </button>
                   <div className="slider-container" id="slider-top-shows">
-                    {topShows.map((item) => (
-                      <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                        <img 
-                          className="card-img" 
-                          src={getImageUrl(item.Id, 'Backdrop')} 
-                          alt={item.Name} 
-                          loading="lazy"
-                        />
-                        {previewActiveId === item.Id && (
-                          <video
-                            className="card-preview-video"
-                            src={getPreviewStreamUrl(item)}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                          />
-                        )}
-                        <div className="card-title-overlay">
-                          {item.ImageTags && item.ImageTags.Logo ? (
+                    {topShows.slice(0, 10).map((item, index) => {
+                      const cardClass = isMobile ? "card top10-card" : "card horizontal top10-card";
+                      const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                      return (
+                        <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave} style={{ position: 'relative', display: 'flex', alignItems: 'stretch' }}>
+                          <div className="top10-rank-container">
+                            <span className="top10-rank-number">{index + 1}</span>
+                          </div>
+                          <div className="top10-card-inner" style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
                             <img 
-                              className="card-logo" 
-                              src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                              className="card-img" 
+                              src={imageSrc} 
                               alt={item.Name} 
+                              loading="lazy"
                             />
-                          ) : (
-                            <span className="card-text-title">{item.Name}</span>
-                          )}
-                        </div>
-                        <div className="card-details">
-                          <p className="card-title">{item.Name}</p>
-                          <div className="card-meta">
-                            <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
-                            <span>{item.ProductionYear}</span>
+                            {previewActiveId === item.Id && (
+                              <video
+                                className="card-preview-video"
+                                src={getPreviewStreamUrl(item)}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                              />
+                            )}
+                            {!isMobile && (
+                              <div className="card-title-overlay">
+                                {item.ImageTags && item.ImageTags.Logo ? (
+                                  <img 
+                                    className="card-logo" 
+                                    src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                    alt={item.Name} 
+                                  />
+                                ) : (
+                                  <span className="card-text-title">{item.Name}</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="card-details">
+                              <p className="card-title">{item.Name}</p>
+                              <div className="card-meta">
+                                <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                <span>{item.ProductionYear}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-top-shows', 'right')}>
                     <ChevronRight size={30} />
@@ -1837,50 +2800,61 @@ export default function App() {
               {/* Slider: Top Anime */}
               {topAnime.length > 0 && (
                 <div className="row">
-                  <h2 className="row-header">Top Anime</h2>
+                  <h2 className="row-header">Top 10 Anime</h2>
                   <div className="slider-wrapper">
                     <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-top-anime', 'left')}>
                       <ChevronLeft size={30} />
                     </button>
                     <div className="slider-container" id="slider-top-anime">
-                      {topAnime.map((item) => (
-                        <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                          <img 
-                            className="card-img" 
-                            src={getImageUrl(item.Id, 'Backdrop')} 
-                            alt={item.Name} 
-                            loading="lazy"
-                          />
-                          {previewActiveId === item.Id && (
-                            <video
-                              className="card-preview-video"
-                              src={getPreviewStreamUrl(item)}
-                              autoPlay
-                              muted
-                              loop
-                              playsInline
-                            />
-                          )}
-                          <div className="card-title-overlay">
-                            {item.ImageTags && item.ImageTags.Logo ? (
-                              <img 
-                                className="card-logo" 
-                                src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
-                                alt={item.Name} 
-                              />
-                            ) : (
-                              <span className="card-text-title">{item.Name}</span>
-                            )}
+                    {topAnime.slice(0, 10).map((item, index) => {
+                      const cardClass = isMobile ? "card top10-card" : "card horizontal top10-card";
+                      const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                      return (
+                        <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave} style={{ position: 'relative', display: 'flex', alignItems: 'stretch' }}>
+                          <div className="top10-rank-container">
+                            <span className="top10-rank-number">{index + 1}</span>
                           </div>
-                          <div className="card-details">
-                            <p className="card-title">{item.Name}</p>
-                            <div className="card-meta">
-                              <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
-                              <span>{item.ProductionYear}</span>
+                          <div className="top10-card-inner" style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+                            <img 
+                              className="card-img" 
+                              src={imageSrc} 
+                              alt={item.Name} 
+                              loading="lazy"
+                            />
+                            {previewActiveId === item.Id && (
+                              <video
+                                className="card-preview-video"
+                                src={getPreviewStreamUrl(item)}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                              />
+                            )}
+                            {!isMobile && (
+                              <div className="card-title-overlay">
+                                {item.ImageTags && item.ImageTags.Logo ? (
+                                  <img 
+                                    className="card-logo" 
+                                    src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                    alt={item.Name} 
+                                  />
+                                ) : (
+                                  <span className="card-text-title">{item.Name}</span>
+                                )}
+                              </div>
+                            )}
+                            <div className="card-details">
+                              <p className="card-title">{item.Name}</p>
+                              <div className="card-meta">
+                                <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                <span>{item.ProductionYear}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                     </div>
                     <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-top-anime', 'right')}>
                       <ChevronRight size={30} />
@@ -1897,44 +2871,50 @@ export default function App() {
                     <ChevronLeft size={30} />
                   </button>
                   <div className="slider-container" id="slider-recent-movies">
-                    {recentlyAddedMovies.map((item) => (
-                      <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                        <img 
-                          className="card-img" 
-                          src={getImageUrl(item.Id, 'Backdrop')} 
-                          alt={item.Name} 
-                          loading="lazy"
-                        />
-                        {previewActiveId === item.Id && (
-                          <video
-                            className="card-preview-video"
-                            src={getPreviewStreamUrl(item)}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
+                    {recentlyAddedMovies.map((item) => {
+                      const cardClass = isMobile ? "card" : "card horizontal";
+                      const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                      return (
+                        <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                          <img 
+                            className="card-img" 
+                            src={imageSrc} 
+                            alt={item.Name} 
+                            loading="lazy"
                           />
-                        )}
-                        <div className="card-title-overlay">
-                          {item.ImageTags && item.ImageTags.Logo ? (
-                            <img 
-                              className="card-logo" 
-                              src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
-                              alt={item.Name} 
+                          {previewActiveId === item.Id && (
+                            <video
+                              className="card-preview-video"
+                              src={getPreviewStreamUrl(item)}
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
                             />
-                          ) : (
-                            <span className="card-text-title">{item.Name}</span>
                           )}
-                        </div>
-                        <div className="card-details">
-                          <p className="card-title">{item.Name}</p>
-                          <div className="card-meta">
-                            {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
-                            <span>{item.ProductionYear}</span>
+                          {!isMobile && (
+                            <div className="card-title-overlay">
+                              {item.ImageTags && item.ImageTags.Logo ? (
+                                <img 
+                                  className="card-logo" 
+                                  src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                  alt={item.Name} 
+                                />
+                              ) : (
+                                <span className="card-text-title">{item.Name}</span>
+                              )}
+                            </div>
+                          )}
+                          <div className="card-details">
+                            <p className="card-title">{item.Name}</p>
+                            <div className="card-meta">
+                              {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                              <span>{item.ProductionYear}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-recent-movies', 'right')}>
                     <ChevronRight size={30} />
@@ -1950,44 +2930,50 @@ export default function App() {
                     <ChevronLeft size={30} />
                   </button>
                   <div className="slider-container" id="slider-recent-shows">
-                    {recentlyAddedShows.map((item) => (
-                      <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                        <img 
-                          className="card-img" 
-                          src={getImageUrl(item.Id, 'Backdrop')} 
-                          alt={item.Name} 
-                          loading="lazy"
-                        />
-                        {previewActiveId === item.Id && (
-                          <video
-                            className="card-preview-video"
-                            src={getPreviewStreamUrl(item)}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
+                    {recentlyAddedShows.map((item) => {
+                      const cardClass = isMobile ? "card" : "card horizontal";
+                      const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                      return (
+                        <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                          <img 
+                            className="card-img" 
+                            src={imageSrc} 
+                            alt={item.Name} 
+                            loading="lazy"
                           />
-                        )}
-                        <div className="card-title-overlay">
-                          {item.ImageTags && item.ImageTags.Logo ? (
-                            <img 
-                              className="card-logo" 
-                              src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
-                              alt={item.Name} 
+                          {previewActiveId === item.Id && (
+                            <video
+                              className="card-preview-video"
+                              src={getPreviewStreamUrl(item)}
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
                             />
-                          ) : (
-                            <span className="card-text-title">{item.Name}</span>
                           )}
-                        </div>
-                        <div className="card-details">
-                          <p className="card-title">{item.Name}</p>
-                          <div className="card-meta">
-                            {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
-                            <span>{item.ProductionYear}</span>
+                          {!isMobile && (
+                            <div className="card-title-overlay">
+                              {item.ImageTags && item.ImageTags.Logo ? (
+                                <img 
+                                  className="card-logo" 
+                                  src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                  alt={item.Name} 
+                                />
+                              ) : (
+                                <span className="card-text-title">{item.Name}</span>
+                              )}
+                            </div>
+                          )}
+                          <div className="card-details">
+                            <p className="card-title">{item.Name}</p>
+                            <div className="card-meta">
+                              {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                              <span>{item.ProductionYear}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-recent-shows', 'right')}>
                     <ChevronRight size={30} />
@@ -1995,49 +2981,999 @@ export default function App() {
                 </div>
               </div>
 
-            </>
-          ) : (
-            /* Isolated Grid Container */
-            <div className="grid-container">
-              {filteredGridItems.map((item) => (
-                <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={() => handleCardMouseEnter(item)} onMouseLeave={handleCardMouseLeave}>
-                  <img 
-                    className="card-img" 
-                    src={getImageUrl(item.Id, 'Backdrop')} 
-                    alt={item.Name} 
-                    loading="lazy"
-                  />
-                  {previewActiveId === item.Id && (
-                    <video
-                      className="card-preview-video"
-                      src={getPreviewStreamUrl(item)}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                    />
-                  )}
-                  <div className="card-title-overlay">
-                    {item.ImageTags && item.ImageTags.Logo ? (
-                      <img 
-                        className="card-logo" 
-                        src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
-                        alt={item.Name} 
-                      />
-                    ) : (
-                      <span className="card-text-title">{item.Name}</span>
-                    )}
+            </>          ) : filterType === 'Movie' ? (
+            selectedGenreView ? (
+              <div className="network-view" style={{ marginTop: 'calc(var(--header-height) + 20px)' }}>
+                <div className="network-header-container" style={{ margin: '0 4% 20px 4%' }}>
+                  <h1 className="network-header-title">
+                    <span>{selectedGenreView.name}</span>
+                  </h1>
+                  <button className="btn-back" onClick={() => setSelectedGenreView(null)}>
+                    <ChevronLeft size={16} /> Back to Movies
+                  </button>
+                </div>
+                {selectedGenreView.loading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 0', width: '100%', color: 'var(--text-muted)' }}>
+                    <style>{`
+                      @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                      }
+                    `}</style>
+                    <div className="spinner" style={{ border: '4px solid rgba(255,255,255,0.1)', width: '36px', height: '36px', borderRadius: '50%', borderLeftColor: 'var(--accent-color)', animation: 'spin 1s linear infinite', marginBottom: '15px' }}></div>
+                    <span>Loading movies...</span>
                   </div>
-                  <div className="card-details">
-                    <p className="card-title">{item.Name}</p>
-                    <div className="card-meta">
-                      {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
-                      <span>{item.ProductionYear}</span>
+                ) : selectedGenreView.items.length === 0 ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0', width: '100%', color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+                    No movies found in this category.
+                  </div>
+                ) : (
+                  <div className="grid-container">
+                    {selectedGenreView.items.map((item) => {
+                      const cardClass = isMobile ? "card" : "card horizontal";
+                      const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                      return (
+                        <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                          <img 
+                            className="card-img" 
+                            src={imageSrc} 
+                            alt={item.Name} 
+                            loading="lazy"
+                          />
+                          {previewActiveId === item.Id && (
+                            <video
+                              className="card-preview-video"
+                              src={getPreviewStreamUrl(item)}
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
+                            />
+                          )}
+                          {!isMobile && (
+                            <div className="card-title-overlay">
+                              {item.ImageTags && item.ImageTags.Logo ? (
+                                <img 
+                                  className="card-logo" 
+                                  src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                  alt={item.Name} 
+                                />
+                              ) : (
+                                <span className="card-text-title">{item.Name}</span>
+                              )}
+                            </div>
+                          )}
+                          <div className="card-details">
+                            <p className="card-title">{item.Name}</p>
+                            <div className="card-meta">
+                              {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                              <span>{item.ProductionYear}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Subheader with Browse All button */}
+                <div className="network-header-container" style={{ margin: '20px 4% 10px 4%', borderBottom: 'none' }}>
+                  <h1 className="network-header-title" style={{ fontSize: '2.2rem' }}>
+                    <span>Movies</span>
+                  </h1>
+                  <button className="btn-back" onClick={() => handleSeeAllGenre('All Movies')}>
+                    Browse All Movies
+                  </button>
+                </div>
+
+                {/* Slider: Networks */}
+                {(availableNetworks.length > 0 ? availableNetworks : networks).length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Networks</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-movies-networks', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-movies-networks">
+                        {(availableNetworks.length > 0 ? availableNetworks : networks).map((network) => (
+                          <div key={network.name} className={`network-card ${network.className || 'network-generic'}`} onClick={() => handleNetworkClick(network, 'Movie')}>
+                            {network.isGeneric ? (
+                              <span className="network-name">{network.name}</span>
+                            ) : (
+                              <span className="network-logo-placeholder">{network.name}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-movies-networks', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
                     </div>
                   </div>
+                )}
+
+                {/* Slider: Movie Collections */}
+                {collections.length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Movie Collections</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-movies-collections', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-movies-collections">
+                        {collections.map((item) => {
+                          const cardClass = isMobile ? "card" : "card horizontal";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                              <img 
+                                className="card-img" 
+                                src={imageSrc} 
+                                alt={item.Name} 
+                                loading="lazy"
+                              />
+                              {!isMobile && (
+                                <div className="card-title-overlay">
+                                  {item.ImageTags && item.ImageTags.Logo ? (
+                                    <img 
+                                      className="card-logo" 
+                                      src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                      alt={item.Name} 
+                                    />
+                                  ) : (
+                                    <span className="card-text-title">{item.Name}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="card-details">
+                                <p className="card-title">{item.Name}</p>
+                                <div className="card-meta">
+                                  <span>Collection</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-movies-collections', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slider: Continue Watching (Movies only) */}
+                {continueWatching.filter(item => item.Type === 'Movie').length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Continue Watching</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-movies-resume', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-movies-resume">
+                        {continueWatching.filter(item => item.Type === 'Movie').map((item) => (
+                          <div key={item.Id} className="card horizontal" onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave} style={{ position: 'relative' }}>
+                            <img 
+                              className="card-img" 
+                              src={getImageUrl(item.Id, 'Backdrop', '', item.UserData?.PlaybackPositionTicks)} 
+                              alt={item.Name} 
+                              loading="lazy"
+                              onError={(e) => {
+                                e.target.src = getImageUrl(item.Id, 'Primary');
+                              }}
+                            />
+                            {previewActiveId === item.Id && (
+                              <video
+                                className="card-preview-video"
+                                src={getPreviewStreamUrl(item)}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                              />
+                            )}
+                            <div className="card-title-overlay">
+                              {item.ImageTags && item.ImageTags.Logo ? (
+                                <img 
+                                  className="card-logo" 
+                                  src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                  alt={item.Name} 
+                                />
+                              ) : (
+                                <span className="card-text-title">{item.Name}</span>
+                              )}
+                            </div>
+                            {item.UserData && item.UserData.PlaybackPositionTicks && item.RunTimeTicks && (
+                              <div className="progress-bar-container" style={{ position: 'absolute', bottom: '0', left: '0', width: '100%', height: '4px', backgroundColor: 'rgba(255,255,255,0.3)', zIndex: 5 }}>
+                                <div className="progress-bar-fill" style={{ width: `${(item.UserData.PlaybackPositionTicks / item.RunTimeTicks) * 100}%`, height: '100%', backgroundColor: 'var(--accent-color)' }} />
+                              </div>
+                            )}
+                            <div className="card-details">
+                              <p className="card-title">{item.Name}</p>
+                              <div className="card-meta">
+                                {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                                <span>{item.ProductionYear}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-movies-resume', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slider: Top 10 Movies */}
+                {topMovies.length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Top 10 Movies</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-movies-top10', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-movies-top10">
+                        {topMovies.slice(0, 10).map((item, index) => {
+                          const cardClass = isMobile ? "card top10-card" : "card horizontal top10-card";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave} style={{ position: 'relative', display: 'flex', alignItems: 'stretch' }}>
+                              <div className="top10-rank-container">
+                                <span className="top10-rank-number">{index + 1}</span>
+                              </div>
+                              <div className="top10-card-inner" style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+                                <img 
+                                  className="card-img" 
+                                  src={imageSrc} 
+                                  alt={item.Name} 
+                                  loading="lazy"
+                                />
+                                {previewActiveId === item.Id && (
+                                  <video
+                                    className="card-preview-video"
+                                    src={getPreviewStreamUrl(item)}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                  />
+                                )}
+                                {!isMobile && (
+                                  <div className="card-title-overlay">
+                                    {item.ImageTags && item.ImageTags.Logo ? (
+                                      <img 
+                                        className="card-logo" 
+                                        src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                        alt={item.Name} 
+                                      />
+                                    ) : (
+                                      <span className="card-text-title">{item.Name}</span>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="card-details">
+                                  <p className="card-title">{item.Name}</p>
+                                  <div className="card-meta">
+                                    <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                    <span>{item.ProductionYear}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-movies-top10', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slider: Top Pick for You (10 Items) */}
+                {movieTopPicks.length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Top Picks For You</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-movies-picks', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-movies-picks">
+                        {movieTopPicks.slice(0, 10).map((item) => {
+                          const cardClass = isMobile ? "card" : "card horizontal";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                              <img 
+                                className="card-img" 
+                                src={imageSrc} 
+                                alt={item.Name} 
+                                loading="lazy"
+                              />
+                              {previewActiveId === item.Id && (
+                                <video
+                                  className="card-preview-video"
+                                  src={getPreviewStreamUrl(item)}
+                                  autoPlay
+                                  muted
+                                  loop
+                                  playsInline
+                                />
+                              )}
+                              {!isMobile && (
+                                <div className="card-title-overlay">
+                                  {item.ImageTags && item.ImageTags.Logo ? (
+                                    <img 
+                                      className="card-logo" 
+                                      src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                      alt={item.Name} 
+                                    />
+                                  ) : (
+                                    <span className="card-text-title">{item.Name}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="card-details">
+                                <p className="card-title">{item.Name}</p>
+                                <div className="card-meta">
+                                  <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                  <span>{item.ProductionYear}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-movies-picks', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slider: Recently Added Movies */}
+                {recentlyAddedMovies.length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Recently Added Movies</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-movies-recent', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-movies-recent">
+                        {recentlyAddedMovies.map((item) => {
+                          const cardClass = isMobile ? "card" : "card horizontal";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                              <img 
+                                className="card-img" 
+                                src={imageSrc} 
+                                alt={item.Name} 
+                                loading="lazy"
+                              />
+                              {previewActiveId === item.Id && (
+                                <video
+                                  className="card-preview-video"
+                                  src={getPreviewStreamUrl(item)}
+                                  autoPlay
+                                  muted
+                                  loop
+                                  playsInline
+                                />
+                              )}
+                              {!isMobile && (
+                                <div className="card-title-overlay">
+                                  {item.ImageTags && item.ImageTags.Logo ? (
+                                    <img 
+                                      className="card-logo" 
+                                      src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                      alt={item.Name} 
+                                    />
+                                  ) : (
+                                    <span className="card-text-title">{item.Name}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="card-details">
+                                <p className="card-title">{item.Name}</p>
+                                <div className="card-meta">
+                                  <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                  <span>{item.ProductionYear}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-movies-recent', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sliders: Top 3 Genres */}
+                {userTopGenres.map((genre, idx) => {
+                  const movies = genreMoviesMap[genre] || [];
+                  if (movies.length === 0) return null;
+                  const sliderId = `slider-movies-genre-${idx}`;
+                  return (
+                    <div key={genre} className="row">
+                      <h2 className="row-header">Popular in {genre}</h2>
+                      <div className="slider-wrapper">
+                        <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider(sliderId, 'left')}>
+                          <ChevronLeft size={30} />
+                        </button>
+                        <div className="slider-container" id={sliderId}>
+                          {movies.map((item) => {
+                            const cardClass = isMobile ? "card" : "card horizontal";
+                            const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                            return (
+                              <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                                <img 
+                                  className="card-img" 
+                                  src={imageSrc} 
+                                  alt={item.Name} 
+                                  loading="lazy"
+                                />
+                                {previewActiveId === item.Id && (
+                                  <video
+                                    className="card-preview-video"
+                                    src={getPreviewStreamUrl(item)}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                  />
+                                )}
+                                {!isMobile && (
+                                  <div className="card-title-overlay">
+                                    {item.ImageTags && item.ImageTags.Logo ? (
+                                      <img 
+                                        className="card-logo" 
+                                        src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                        alt={item.Name} 
+                                      />
+                                    ) : (
+                                      <span className="card-text-title">{item.Name}</span>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="card-details">
+                                  <p className="card-title">{item.Name}</p>
+                                  <div className="card-meta">
+                                    <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                    <span>{item.ProductionYear}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider(sliderId, 'right')}>
+                          <ChevronRight size={30} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )
+          ) : filterType === 'Series' ? (
+            selectedGenreViewSeries ? (
+              <div className="network-view" style={{ marginTop: 'calc(var(--header-height) + 20px)' }}>
+                <div className="network-header-container" style={{ margin: '0 4% 20px 4%' }}>
+                  <h1 className="network-header-title">
+                    <span>{selectedGenreViewSeries.name}</span>
+                  </h1>
+                  <button className="btn-back" onClick={() => setSelectedGenreViewSeries(null)}>
+                    <ChevronLeft size={16} /> Back to TV Shows
+                  </button>
                 </div>
-              ))}
+                {selectedGenreViewSeries.loading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px 0', width: '100%', color: 'var(--text-muted)' }}>
+                    <style>{`
+                      @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                      }
+                    `}</style>
+                    <div className="spinner" style={{ border: '4px solid rgba(255,255,255,0.1)', width: '36px', height: '36px', borderRadius: '50%', borderLeftColor: 'var(--accent-color)', animation: 'spin 1s linear infinite', marginBottom: '15px' }}></div>
+                    <span>Loading TV shows...</span>
+                  </div>
+                ) : selectedGenreViewSeries.items.length === 0 ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0', width: '100%', color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+                    No TV shows found in this category.
+                  </div>
+                ) : (
+                  <div className="grid-container">
+                    {selectedGenreViewSeries.items.map((item) => {
+                      const cardClass = isMobile ? "card" : "card horizontal";
+                      const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                      return (
+                        <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                          <img 
+                            className="card-img" 
+                            src={imageSrc} 
+                            alt={item.Name} 
+                            loading="lazy"
+                          />
+                          {previewActiveId === item.Id && (
+                            <video
+                              className="card-preview-video"
+                              src={getPreviewStreamUrl(item)}
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
+                            />
+                          )}
+                          {!isMobile && (
+                            <div className="card-title-overlay">
+                              {item.ImageTags && item.ImageTags.Logo ? (
+                                <img 
+                                  className="card-logo" 
+                                  src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                  alt={item.Name} 
+                                />
+                              ) : (
+                                <span className="card-text-title">{item.Name}</span>
+                              )}
+                            </div>
+                          )}
+                          <div className="card-details">
+                            <p className="card-title">{item.Name}</p>
+                            <div className="card-meta">
+                              {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                              <span>{item.ProductionYear}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Subheader with Browse All button */}
+                <div className="network-header-container" style={{ margin: '20px 4% 10px 4%', borderBottom: 'none' }}>
+                  <h1 className="network-header-title" style={{ fontSize: '2.2rem' }}>
+                    <span>TV Shows</span>
+                  </h1>
+                  <button className="btn-back" onClick={() => handleSeeAllGenreSeries('All TV Shows')}>
+                    Browse All TV Shows
+                  </button>
+                </div>
+
+                {/* Slider: Networks */}
+                {(availableNetworks.length > 0 ? availableNetworks : networks).length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Networks</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-shows-networks', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-shows-networks">
+                        {(availableNetworks.length > 0 ? availableNetworks : networks).map((network) => (
+                          <div key={network.name} className={`network-card ${network.className || 'network-generic'}`} onClick={() => handleNetworkClick(network, 'Series')}>
+                            {network.isGeneric ? (
+                              <span className="network-name">{network.name}</span>
+                            ) : (
+                              <span className="network-logo-placeholder">{network.name}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-shows-networks', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slider: Continue Watching */}
+                {continueWatching.filter(i => i.Type === 'Episode' || i.Type === 'Series').length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Continue Watching</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-shows-resume', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-shows-resume">
+                        {continueWatching.filter(i => i.Type === 'Episode' || i.Type === 'Series').map((item) => {
+                          const cardClass = isMobile ? "card" : "card horizontal";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          const progress = item.UserData && item.UserData.PlaybackPositionTicks && item.RunTimeTicks
+                            ? (item.UserData.PlaybackPositionTicks / item.RunTimeTicks) * 100
+                            : 0;
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                              <img 
+                                className="card-img" 
+                                src={imageSrc} 
+                                alt={item.Name} 
+                                loading="lazy"
+                              />
+                              {previewActiveId === item.Id && (
+                                <video
+                                  className="card-preview-video"
+                                  src={getPreviewStreamUrl(item)}
+                                  autoPlay
+                                  muted
+                                  loop
+                                  playsInline
+                                />
+                              )}
+                              <div className="progress-container">
+                                <div className="progress-bar" style={{ width: `${progress}%` }}></div>
+                              </div>
+                              {!isMobile && (
+                                <div className="card-title-overlay">
+                                  {item.ImageTags && item.ImageTags.Logo ? (
+                                    <img 
+                                      className="card-logo" 
+                                      src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                      alt={item.Name} 
+                                    />
+                                  ) : (
+                                    <span className="card-text-title">{item.Name}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="card-details">
+                                <p className="card-title">{item.SeriesName || item.Name}</p>
+                                <div className="card-meta">
+                                  {item.Type === 'Episode' && <span>S{item.ParentIndexNumber} E{item.IndexNumber}</span>}
+                                  <span>{formatTicks(item.RunTimeTicks - (item.UserData ? item.UserData.PlaybackPositionTicks : 0))} left</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-shows-resume', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slider: Top 10 TV Shows */}
+                {topShows.length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Top 10 TV Shows</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-shows-top10', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-shows-top10">
+                        {topShows.slice(0, 10).map((item, index) => {
+                          const cardClass = isMobile ? "card top10-card" : "card horizontal top10-card";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave} style={{ position: 'relative', display: 'flex', alignItems: 'stretch' }}>
+                              <div className="top10-rank-container">
+                                <span className="top10-rank-number">{index + 1}</span>
+                              </div>
+                              <div className="top10-card-inner" style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+                                <img 
+                                  className="card-img" 
+                                  src={imageSrc} 
+                                  alt={item.Name} 
+                                  loading="lazy"
+                                />
+                                {previewActiveId === item.Id && (
+                                  <video
+                                    className="card-preview-video"
+                                    src={getPreviewStreamUrl(item)}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                  />
+                                )}
+                                {!isMobile && (
+                                  <div className="card-title-overlay">
+                                    {item.ImageTags && item.ImageTags.Logo ? (
+                                      <img 
+                                        className="card-logo" 
+                                        src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                        alt={item.Name} 
+                                      />
+                                    ) : (
+                                      <span className="card-text-title">{item.Name}</span>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="card-details">
+                                  <p className="card-title">{item.Name}</p>
+                                  <div className="card-meta">
+                                    <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                    <span>{item.ProductionYear}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-shows-top10', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slider: Top Picks for You */}
+                {showTopPicks.length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Top Picks For You</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-shows-picks', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-shows-picks">
+                        {showTopPicks.map((item) => {
+                          const cardClass = isMobile ? "card" : "card horizontal";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                              <img 
+                                className="card-img" 
+                                src={imageSrc} 
+                                alt={item.Name} 
+                                loading="lazy"
+                              />
+                              {previewActiveId === item.Id && (
+                                <video
+                                  className="card-preview-video"
+                                  src={getPreviewStreamUrl(item)}
+                                  autoPlay
+                                  muted
+                                  loop
+                                  playsInline
+                                />
+                              )}
+                              {!isMobile && (
+                                <div className="card-title-overlay">
+                                  {item.ImageTags && item.ImageTags.Logo ? (
+                                    <img 
+                                      className="card-logo" 
+                                      src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                      alt={item.Name} 
+                                    />
+                                  ) : (
+                                    <span className="card-text-title">{item.Name}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="card-details">
+                                <p className="card-title">{item.Name}</p>
+                                <div className="card-meta">
+                                  <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                  <span>{item.ProductionYear}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-shows-picks', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slider: Recently Added */}
+                {recentlyAddedShows.length > 0 && (
+                  <div className="row">
+                    <h2 className="row-header">Recently Added</h2>
+                    <div className="slider-wrapper">
+                      <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider('slider-shows-recent', 'left')}>
+                        <ChevronLeft size={30} />
+                      </button>
+                      <div className="slider-container" id="slider-shows-recent">
+                        {recentlyAddedShows.map((item) => {
+                          const cardClass = isMobile ? "card" : "card horizontal";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                              <img 
+                                className="card-img" 
+                                src={imageSrc} 
+                                alt={item.Name} 
+                                loading="lazy"
+                              />
+                              {previewActiveId === item.Id && (
+                                <video
+                                  className="card-preview-video"
+                                  src={getPreviewStreamUrl(item)}
+                                  autoPlay
+                                  muted
+                                  loop
+                                  playsInline
+                                />
+                              )}
+                              {!isMobile && (
+                                <div className="card-title-overlay">
+                                  {item.ImageTags && item.ImageTags.Logo ? (
+                                    <img 
+                                      className="card-logo" 
+                                      src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                      alt={item.Name} 
+                                    />
+                                  ) : (
+                                    <span className="card-text-title">{item.Name}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="card-details">
+                                <p className="card-title">{item.Name}</p>
+                                <div className="card-meta">
+                                  <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                  <span>{item.ProductionYear}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider('slider-shows-recent', 'right')}>
+                        <ChevronRight size={30} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sliders: Top 3 Genres */}
+                {userTopGenresSeries.map((genre, idx) => {
+                  const shows = genreShowsMap[genre] || [];
+                  if (shows.length === 0) return null;
+                  const sliderId = `slider-shows-genre-${idx}`;
+                  return (
+                    <div key={genre} className="row">
+                      <h2 className="row-header">Popular in {genre}</h2>
+                      <div className="slider-wrapper">
+                        <button className="slider-arrow slider-arrow-left" onClick={() => scrollSlider(sliderId, 'left')}>
+                          <ChevronLeft size={30} />
+                        </button>
+                        <div className="slider-container" id={sliderId}>
+                          {shows.map((item) => {
+                            const cardClass = isMobile ? "card" : "card horizontal";
+                            const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                            return (
+                              <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                                <img 
+                                  className="card-img" 
+                                  src={imageSrc} 
+                                  alt={item.Name} 
+                                  loading="lazy"
+                                />
+                                {previewActiveId === item.Id && (
+                                  <video
+                                    className="card-preview-video"
+                                    src={getPreviewStreamUrl(item)}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                  />
+                                )}
+                                {!isMobile && (
+                                  <div className="card-title-overlay">
+                                    {item.ImageTags && item.ImageTags.Logo ? (
+                                      <img 
+                                        className="card-logo" 
+                                        src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                        alt={item.Name} 
+                                      />
+                                    ) : (
+                                      <span className="card-text-title">{item.Name}</span>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="card-details">
+                                  <p className="card-title">{item.Name}</p>
+                                  <div className="card-meta">
+                                    <span className="rating-pill">{item.CommunityRating ? item.CommunityRating.toFixed(1) : 'NR'}</span>
+                                    <span>{item.ProductionYear}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <button className="slider-arrow slider-arrow-right" onClick={() => scrollSlider(sliderId, 'right')}>
+                          <ChevronRight size={30} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )
+          ) : (
+            <div className="grid-container">
+              {filteredGridItems.map((item) => {
+                const cardClass = isMobile ? "card" : "card horizontal";
+                const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                return (
+                  <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)} onMouseEnter={(e) => handleCardMouseEnter(e, item)} onMouseLeave={handleCardMouseLeave}>
+                    <img 
+                      className="card-img" 
+                      src={imageSrc} 
+                      alt={item.Name} 
+                      loading="lazy"
+                    />
+                    {previewActiveId === item.Id && (
+                      <video
+                        className="card-preview-video"
+                        src={getPreviewStreamUrl(item)}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                      />
+                    )}
+                    {!isMobile && (
+                      <div className="card-title-overlay">
+                        {item.ImageTags && item.ImageTags.Logo ? (
+                          <img 
+                            className="card-logo" 
+                            src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                            alt={item.Name} 
+                          />
+                        ) : (
+                          <span className="card-text-title">{item.Name}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="card-details">
+                      <p className="card-title">{item.Name}</p>
+                      <div className="card-meta">
+                        {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                        <span>{item.ProductionYear}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          )}
+
+          {/* Mobile Bottom Navigation Bar */}
+          {!activePlayback && (
+            <nav className="mobile-bottom-nav">
+              <div className={`mobile-bottom-nav-item ${filterType === 'All' ? 'active' : ''}`} onClick={() => setFilterType('All')}>
+                <Home size={20} />
+                <span>Home</span>
+              </div>
+              <div className={`mobile-bottom-nav-item ${filterType === 'Movie' ? 'active' : ''}`} onClick={() => setFilterType('Movie')}>
+                <Film size={20} />
+                <span>Movies</span>
+              </div>
+              <div className={`mobile-bottom-nav-item ${filterType === 'Series' ? 'active' : ''}`} onClick={() => setFilterType('Series')}>
+                <Tv size={20} />
+                <span>TV Shows</span>
+              </div>
+              <div className={`mobile-bottom-nav-item ${filterType === 'Anime' ? 'active' : ''}`} onClick={() => setFilterType('Anime')}>
+                <Sparkles size={20} />
+                <span>Anime</span>
+              </div>
+              <div className={`mobile-bottom-nav-item ${filterType === 'MyList' ? 'active' : ''}`} onClick={() => setFilterType('MyList')}>
+                <Heart size={20} />
+                <span>My List</span>
+              </div>
+              <div className={`mobile-bottom-nav-item ${filterType === 'BoxSet' ? 'active' : ''}`} onClick={() => setFilterType('BoxSet')}>
+                <Grid size={20} />
+                <span>Collections</span>
+              </div>
+            </nav>
           )}
 
           {/* 2. Netflix-Style TV Show & Movie Details Modal */}
@@ -2221,23 +4157,40 @@ export default function App() {
                         Collection: {itemCollections.length > 0 ? itemCollections[0].Name : 'Related Titles'}
                       </h3>
                       <div className="grid-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px', padding: 0 }}>
-                        {itemCollectionContents.map((item) => (
-                          <div key={item.Id} className="card" onClick={() => handleItemClick(item)}>
-                            <img 
-                              className="card-img" 
-                              src={getImageUrl(item.Id, 'Primary')} 
-                              alt={item.Name} 
-                              loading="lazy"
-                            />
-                            <div className="card-details">
-                              <p className="card-title">{item.Name}</p>
-                              <div className="card-meta">
-                                {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
-                                <span>{item.ProductionYear}</span>
+                        {itemCollectionContents.map((item) => {
+                          const cardClass = isMobile ? "card" : "card horizontal";
+                          const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                          return (
+                            <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)}>
+                              <img 
+                                className="card-img" 
+                                src={imageSrc} 
+                                alt={item.Name} 
+                                loading="lazy"
+                              />
+                              {!isMobile && (
+                                <div className="card-title-overlay">
+                                  {item.ImageTags && item.ImageTags.Logo ? (
+                                    <img 
+                                      className="card-logo" 
+                                      src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                      alt={item.Name} 
+                                    />
+                                  ) : (
+                                    <span className="card-text-title">{item.Name}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="card-details">
+                                <p className="card-title">{item.Name}</p>
+                                <div className="card-meta">
+                                  {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                                  <span>{item.ProductionYear}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -2250,24 +4203,40 @@ export default function App() {
                       <div className="grid-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px', padding: 0 }}>
                         {similarItems
                           .filter(s => !itemCollectionContents.some(c => c.Id === s.Id))
-                          .map((item) => (
-                            <div key={item.Id} className="card" onClick={() => handleItemClick(item)}>
-
-                            <img 
-                              className="card-img" 
-                              src={getImageUrl(item.Id, 'Primary')} 
-                              alt={item.Name} 
-                              loading="lazy"
-                            />
-                            <div className="card-details">
-                              <p className="card-title">{item.Name}</p>
-                              <div className="card-meta">
-                                {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
-                                <span>{item.ProductionYear}</span>
+                          .map((item) => {
+                            const cardClass = isMobile ? "card" : "card horizontal";
+                            const imageSrc = isMobile ? getImageUrl(item.Id, 'Primary') : getImageUrl(item.Id, 'Backdrop');
+                            return (
+                              <div key={item.Id} className={cardClass} onClick={() => handleItemClick(item)}>
+                                <img 
+                                  className="card-img" 
+                                  src={imageSrc} 
+                                  alt={item.Name} 
+                                  loading="lazy"
+                                />
+                                {!isMobile && (
+                                  <div className="card-title-overlay">
+                                    {item.ImageTags && item.ImageTags.Logo ? (
+                                      <img 
+                                        className="card-logo" 
+                                        src={`${serverUrl}/Items/${item.Id}/Images/Logo?maxHeight=40`} 
+                                        alt={item.Name} 
+                                      />
+                                    ) : (
+                                      <span className="card-text-title">{item.Name}</span>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="card-details">
+                                  <p className="card-title">{item.Name}</p>
+                                  <div className="card-meta">
+                                    {item.CommunityRating && <span className="rating-pill">{item.CommunityRating.toFixed(1)}</span>}
+                                    <span>{item.ProductionYear}</span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        ))}
+                            );
+                          })}
                       </div>
                     </div>
                   )}
@@ -2290,16 +4259,8 @@ export default function App() {
               <video 
                 ref={videoRef}
                 className="player-video"
-                src={
-                  videoQuality === 'auto'
-                    ? `${serverUrl}/Videos/${activePlayback.id}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&api_key=${token}`
-                    : videoQuality === '1080p'
-                    ? `${serverUrl}/Videos/${activePlayback.id}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=1920&maxHeight=1080&VideoBitrate=4000000&api_key=${token}`
-                    : videoQuality === '720p'
-                    ? `${serverUrl}/Videos/${activePlayback.id}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=1280&maxHeight=720&VideoBitrate=2000000&api_key=${token}`
-                    : `${serverUrl}/Videos/${activePlayback.id}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=854&maxHeight=480&VideoBitrate=800000&api_key=${token}`
-                }
-                onClick={handlePlayPause}
+                style={{ objectFit: aspectRatio }}
+                onClick={handleVideoClick}
                 onEnded={() => {
                   if (activePlayback && activePlayback.isEpisode) {
                     handleNextEpisode();
@@ -2308,8 +4269,19 @@ export default function App() {
                     fetchContinueWatching();
                   }
                 }}
-
-              />
+                muted={isMuted}
+              >
+                {selectedSubtitleIndex !== null && (
+                  <track
+                    key={selectedSubtitleIndex}
+                    kind="subtitles"
+                    src={`${serverUrl}/Videos/${activePlayback.id}/Subtitles/${selectedSubtitleIndex}/0/Stream.vtt?api_key=${token}`}
+                    srcLang="en"
+                    label="Selected Subtitle"
+                    default
+                  />
+                )}
+              </video>
 
               {/* Skip Intro Overlay */}
               {((introMarker && currentTime >= introMarker.start && currentTime <= introMarker.end) ||
@@ -2406,18 +4378,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Big Center Play/Pause button */}
-                <div className="player-center-play" onClick={handlePlayPause}>
-                  {isPlaying ? (
-                    <div style={{ width: '28px', height: '32px', display: 'flex', gap: '8px' }}>
-                      <div style={{ width: '8px', backgroundColor: '#fff', borderRadius: '2px' }} />
-                      <div style={{ width: '8px', backgroundColor: '#fff', borderRadius: '2px' }} />
-                    </div>
-                  ) : (
-                    <Play fill="#fff" size={36} style={{ marginLeft: '6px' }} />
-                  )}
-                </div>
-
                 {/* Bottom Control Bar */}
                 <div className="player-bottom-bar">
                   
@@ -2433,6 +4393,10 @@ export default function App() {
                           videoRef.current.currentTime = clickPct * duration;
                         }
                       }}
+                      onTouchStart={handleTouchSeek}
+                      onTouchMove={handleTouchSeek}
+                      onMouseMove={handleProgressBarMouseMove}
+                      onMouseLeave={handleProgressBarMouseLeave}
                     >
                       <div 
                         className="player-progress-bar" 
@@ -2442,6 +4406,50 @@ export default function App() {
                         className="player-progress-bar-handle" 
                         style={{ left: `${(currentTime / (duration || 1)) * 100}%` }}
                       />
+
+                      {hoverTime !== null && (
+                        <div 
+                          className="player-timeline-preview"
+                          style={{
+                            position: 'absolute',
+                            bottom: '25px',
+                            left: `${hoverX}px`,
+                            transform: 'translateX(-50%)',
+                            backgroundColor: 'rgba(10, 6, 20, 0.95)',
+                            border: '1px solid rgba(211, 82, 255, 0.4)',
+                            borderRadius: '6px',
+                            padding: '6px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '6px',
+                            pointerEvents: 'none',
+                            zIndex: 100,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.8)',
+                            backdropFilter: 'blur(10px)'
+                          }}
+                        >
+                          {hoverImageSrc && (
+                            <img 
+                              src={hoverImageSrc} 
+                              alt="Preview" 
+                              style={{
+                                width: '160px',
+                                height: '90px',
+                                objectFit: 'cover',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(255, 255, 255, 0.15)'
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ffffff', fontFamily: 'var(--font-display)' }}>
+                            {formatTime(hoverTime)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <span className="player-time">{formatTime(duration)}</span>
                   </div>
@@ -2494,16 +4502,53 @@ export default function App() {
                           <div className="tracks-popup" onClick={(e) => e.stopPropagation()}>
                             <div className="tracks-column">
                               <span className="tracks-column-header">Audio</span>
-                              <div className="track-option active">Primary Track (Default)</div>
+                              {audioStreams.length > 0 ? (
+                                audioStreams.map(stream => (
+                                  <div 
+                                    key={stream.Index} 
+                                    className={`track-option ${selectedAudioIndex === stream.Index ? 'active' : ''}`}
+                                    onClick={() => setSelectedAudioIndex(stream.Index)}
+                                  >
+                                    {stream.DisplayTitle || stream.Language || `Track ${stream.Index}`}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="track-option active">Primary Track (Default)</div>
+                              )}
                             </div>
                             <div className="tracks-column">
                               <span className="tracks-column-header">Subtitles</span>
-                              <div className="track-option active">Off</div>
-                              <div className="track-option">Embed / Track 1</div>
+                              <div 
+                                className={`track-option ${selectedSubtitleIndex === null ? 'active' : ''}`}
+                                onClick={() => setSelectedSubtitleIndex(null)}
+                              >
+                                Off
+                              </div>
+                              {subtitleStreams.map(stream => (
+                                <div 
+                                  key={stream.Index} 
+                                  className={`track-option ${selectedSubtitleIndex === stream.Index ? 'active' : ''}`}
+                                  onClick={() => setSelectedSubtitleIndex(stream.Index)}
+                                >
+                                  {stream.DisplayTitle || stream.Language || `Subtitle ${stream.Index}`}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
                       </div>
+
+                      {/* Aspect Ratio selector */}
+                      <button 
+                        className="player-btn" 
+                        onClick={toggleAspectRatio}
+                        title={`Aspect Ratio: ${aspectRatio === 'contain' ? 'Fit' : aspectRatio === 'cover' ? 'Zoom' : 'Stretch'}`}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, border: '2px solid #fff', borderRadius: '4px', padding: '2px 4px', textTransform: 'uppercase' }}>
+                          {aspectRatio === 'contain' ? 'Fit' : aspectRatio === 'cover' ? 'Zoom' : 'Stretch'}
+                        </span>
+                      </button>
 
                       {/* Resolution Cog settings selector */}
                       <div className="track-selectors">
