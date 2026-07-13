@@ -81,7 +81,7 @@ Mount the compiled `dist` directory as a volume to keep it persistent.
         - ./dist:/jellyfin/jellyfin-web:ro
   ```
 
-* **Docker Run CLI**: Add the `-v` volume flag:
+* **Docker Run CLI**: Add the `-v volume flag**:
   ```bash
   docker run -d \
     --name jellyfin \
@@ -89,6 +89,11 @@ Mount the compiled `dist` directory as a volume to keep it persistent.
     # ... your existing port/volume flags ...
     jellyfin/jellyfin
   ```
+
+> [!TIP]
+> **Can I use `git` and `curl` directly inside my Jellyfin server?**  
+> **No.** The official Jellyfin Docker image is minimal and secure, meaning development/download utilities like `git` or `curl` are not installed inside the container.  
+> **Best Practice**: Always clone, pull, and compile this repository on your **host machine** (where you run Docker) using `git` and `npm`, and then mount the output `dist` folder into the container using **Method 2** above. This keeps your running container lightweight, clean, and secure.
 
 ---
 
