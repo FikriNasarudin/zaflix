@@ -38,7 +38,8 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const { data: episodes = [], isPending: isEpisodesPending } = useEpisodes(isSeries ? item.Id : undefined, selectedSeasonId);
     const { data: similarItems = [], isPending: isSimilarPending } = useSimilarItems(item.Id);
     const { data: parentCollections = [], isPending: isCollectionsPending } = useItemCollections(isBoxSet ? undefined : item.Id);
-    const { data: collectionItems = [], isPending: isBoxSetPending } = useCollectionItems(isBoxSet ? item.Id : undefined);
+    const parentCollectionId = isBoxSet ? item.Id : (parentCollections[0]?.Id || undefined);
+    const { data: collectionItems = [], isPending: isBoxSetPending } = useCollectionItems(parentCollectionId);
 
     const [adminMenuAnchor, setAdminMenuAnchor] = useState<boolean>(false);
     const [isFavorite, setIsFavorite] = useState<boolean>(item.UserData?.IsFavorite || false);
@@ -536,10 +537,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 touchAction: 'pan-y'
                             }}>
                                 {[1, 2, 3, 4].map(i => (
-                                    <div key={i} style={{ flex: '0 0 auto', width: '120px' }}>
+                                    <div key={i} style={{ flex: '0 0 auto', width: '180px' }}>
                                         <div className='skeleton-card' style={{
                                             width: '100%',
-                                            paddingTop: '150%',
+                                            paddingTop: '56.25%',
                                             borderRadius: ZAFlix.radii.card
                                         }} />
                                         <div className='skeleton-card' style={{ width: '70%', height: 14, borderRadius: 4, marginTop: 6 }} />
@@ -560,8 +561,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 touchAction: 'pan-y'
                             }}>
                                 {collectionItems.map((colItem: any) => {
-                                    const colItemPoster = apiClient
-                                        ? apiClient.getUrl(`Items/${colItem.Id}/Images/Primary?quality=80`)
+                                    const imageTag = colItem.BackdropImageTags?.[0] || colItem.ImageTags?.Thumb || colItem.ImageTags?.Primary;
+                                    const imageType = colItem.BackdropImageTags?.[0] ? 'Backdrop' : (colItem.ImageTags?.Thumb ? 'Thumb' : 'Primary');
+                                    const colItemLandscape = apiClient
+                                        ? apiClient.getUrl(`Items/${colItem.Id}/Images/${imageType}/0?quality=80${imageTag ? `&tag=${imageTag}` : ''}`)
                                         : '';
                                     return (
                                         <div
@@ -573,7 +576,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                             className='zaflix-focus-visible will-change-transform'
                                             style={{
                                                 flex: '0 0 auto',
-                                                width: '120px',
+                                                width: '180px',
                                                 cursor: 'pointer',
                                                 scrollSnapAlign: 'start',
                                                 transition: 'transform 0.2s ease'
@@ -583,11 +586,11 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         >
                                             <div style={{
                                                 position: 'relative',
-                                                paddingTop: '150%',
+                                                paddingTop: '56.25%',
                                                 borderRadius: ZAFlix.radii.card,
                                                 overflow: 'hidden',
                                                 border: '1px solid rgba(211, 82, 255, 0.15)',
-                                                backgroundImage: `url(${colItemPoster})`,
+                                                backgroundImage: `url(${colItemLandscape})`,
                                                 backgroundSize: 'cover',
                                                 backgroundPosition: 'center',
                                                 backgroundColor: ZAFlix.colors.card
@@ -609,93 +612,111 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             </div>
                         </div>
                     ))}
-                    {isCollectionsPending ? (
-                        <div style={{ marginTop: '20px', marginBottom: '10px' }}>
-                            <h3 style={sectionTitleStyle}>Part of Collection</h3>
-                            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                                {[1, 2, 3].map(i => (
-                                    <div
-                                        key={i}
-                                        className='skeleton-card'
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            borderRadius: ZAFlix.radii.card,
-                                            padding: '8px 16px',
-                                            height: 76,
-                                            width: 200
-                                        }}
-                                    />
+
+                    {/* Movie Collection Details [Image 4] */}
+                    {item.Type === 'Movie' && parentCollections.length > 0 && (isBoxSetPending ? (
+                        <div style={{ marginTop: '20px' }}>
+                            <h3 style={sectionTitleStyle}>Collection: {parentCollections[0].Name}</h3>
+                            <div className='zaflix-hide-scrollbar' style={{
+                                display: 'flex',
+                                gap: '12px',
+                                overflowX: 'auto',
+                                paddingBottom: '8px',
+                                WebkitOverflowScrolling: 'touch',
+                                scrollSnapType: 'x proximity',
+                                touchAction: 'pan-y'
+                            }}>
+                                {[1, 2, 3, 4].map(i => (
+                                    <div key={i} style={{ flex: '0 0 auto', width: '180px' }}>
+                                        <div className='skeleton-card' style={{
+                                            width: '100%',
+                                            paddingTop: '56.25%',
+                                            borderRadius: ZAFlix.radii.card
+                                        }} />
+                                        <div className='skeleton-card' style={{ width: '70%', height: 14, borderRadius: 4, marginTop: 6 }} />
+                                    </div>
                                 ))}
                             </div>
                         </div>
-                    ) : parentCollections.length > 0 && (
-                        <div style={{ marginTop: '20px', marginBottom: '10px' }}>
-                            <h3 style={sectionTitleStyle}>Part of Collection</h3>
-                            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                                {parentCollections.map((col: any) => {
-                                    const colUrl = apiClient?.getUrl(`Items/${col.Id}/Images/Primary?quality=90`) || '';
+                    ) : collectionItems.length > 0 && (
+                        <div style={{ marginTop: '20px' }}>
+                            <h3 style={sectionTitleStyle}>Collection: {parentCollections[0].Name}</h3>
+                            <div className='zaflix-hide-scrollbar' style={{
+                                display: 'flex',
+                                gap: '12px',
+                                overflowX: 'auto',
+                                padding: '4px 2px 8px',
+                                WebkitOverflowScrolling: 'touch',
+                                scrollSnapType: 'x proximity',
+                                touchAction: 'pan-y'
+                            }}>
+                                {collectionItems.map((colItem: any) => {
+                                    const imageTag = colItem.BackdropImageTags?.[0] || colItem.ImageTags?.Thumb || colItem.ImageTags?.Primary;
+                                    const imageType = colItem.BackdropImageTags?.[0] ? 'Backdrop' : (colItem.ImageTags?.Thumb ? 'Thumb' : 'Primary');
+                                    const colItemLandscape = apiClient
+                                        ? apiClient.getUrl(`Items/${colItem.Id}/Images/${imageType}/0?quality=80${imageTag ? `&tag=${imageTag}` : ''}`)
+                                        : '';
                                     return (
                                         <div
-                                            key={col.Id}
-                                            onClick={() => Events.trigger(document, 'open-zaflix-details', [col])}
-                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Events.trigger(document, 'open-zaflix-details', [col]); } }}
+                                            key={colItem.Id}
+                                            onClick={() => Events.trigger(document, 'open-zaflix-details', [colItem])}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Events.trigger(document, 'open-zaflix-details', [colItem]); } }}
                                             role='button'
                                             tabIndex={0}
-                                            className='zaflix-focus-visible'
+                                            className='zaflix-focus-visible will-change-transform'
                                             style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '12px',
-                                                background: 'rgba(211, 82, 255, 0.08)',
-                                                border: `1px solid ${ZAFlix.colors.border}`,
-                                                borderRadius: ZAFlix.radii.card,
-                                                padding: '8px 16px',
+                                                flex: '0 0 auto',
+                                                width: '180px',
                                                 cursor: 'pointer',
-                                                transition: 'all 0.2s ease'
+                                                scrollSnapAlign: 'start',
+                                                transition: 'transform 0.2s ease'
                                             }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.background = 'rgba(211, 82, 255, 0.15)';
-                                                e.currentTarget.style.borderColor = ZAFlix.colors.borderHover;
-                                                e.currentTarget.style.transform = 'translateY(-1px)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.background = 'rgba(211, 82, 255, 0.08)';
-                                                e.currentTarget.style.borderColor = ZAFlix.colors.border;
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                         >
-                                            {colUrl && (
-                                                <img
-                                                    src={colUrl}
-                                                    loading='lazy'
-                                                    className='zaflix-image-fade-in'
-                                                    onLoad={(e) => e.currentTarget.classList.add('loaded')}
-                                                    style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }}
-                                                    alt={col.Name}
-                                                />
-                                            )}
-                                            <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: ZAFlix.colors.textPrimary }}>{col.Name}</span>
+                                            <div style={{
+                                                position: 'relative',
+                                                paddingTop: '56.25%',
+                                                borderRadius: ZAFlix.radii.card,
+                                                overflow: 'hidden',
+                                                border: '1px solid rgba(211, 82, 255, 0.15)',
+                                                backgroundImage: `url(${colItemLandscape})`,
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                                backgroundColor: ZAFlix.colors.card
+                                            }} />
+                                            <div style={{
+                                                marginTop: '6px',
+                                                fontSize: '0.8rem',
+                                                fontWeight: 'bold',
+                                                textAlign: 'left',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                {colItem.Name}
+                                            </div>
                                         </div>
                                     );
                                 })}
                             </div>
                         </div>
-                    )}
+                    ))}
+
+                    {/* More Like This recommended section in landscape grid */}
                     {isSimilarPending ? (
                         <div style={{ marginTop: '25px' }}>
                             <h3 style={sectionTitleStyle}>More Like This</h3>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
                                 gap: '15px'
                             }}>
-                                {[1, 2, 3].map(i => (
+                                {[1, 2, 3, 4].map(i => (
                                     <div key={i}>
                                         <div className='skeleton-card' style={{
                                             width: '100%',
-                                            paddingTop: '150%',
+                                            paddingTop: '56.25%',
                                             borderRadius: ZAFlix.radii.card
                                         }} />
                                         <div className='skeleton-card' style={{ width: '70%', height: 13, borderRadius: 4, marginTop: 6 }} />
@@ -708,12 +729,14 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             <h3 style={sectionTitleStyle}>More Like This</h3>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
                                 gap: '15px'
                             }}>
                                 {similarItems.map((similarItem) => {
+                                    const imageTag = similarItem.BackdropImageTags?.[0] || similarItem.ImageTags?.Thumb || similarItem.ImageTags?.Primary;
+                                    const imageType = similarItem.BackdropImageTags?.[0] ? 'Backdrop' : (similarItem.ImageTags?.Thumb ? 'Thumb' : 'Primary');
                                     const similarPoster = apiClient
-                                        ? apiClient.getUrl(`Items/${similarItem.Id}/Images/Primary?quality=80`)
+                                        ? apiClient.getUrl(`Items/${similarItem.Id}/Images/${imageType}/0?quality=80${imageTag ? `&tag=${imageTag}` : ''}`)
                                         : '';
                                     return (
                                         <div
@@ -729,7 +752,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         >
                                             <div style={{
                                                 position: 'relative',
-                                                paddingTop: '150%',
+                                                paddingTop: '56.25%',
                                                 borderRadius: ZAFlix.radii.card,
                                                 overflow: 'hidden',
                                                 border: '1px solid rgba(211, 82, 255, 0.15)',

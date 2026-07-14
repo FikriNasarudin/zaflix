@@ -4,11 +4,11 @@ import { useLocation } from 'react-router-dom';
 
 import { appRouter, PUBLIC_PATHS } from 'components/router/appRouter';
 import BaseToolbar from 'components/toolbar/AppToolbar';
-import ServerButton from 'components/toolbar/ServerButton';
 
 import RemotePlayButton from './RemotePlayButton';
 import SyncPlayButton from './SyncPlayButton';
 import SearchButton from './SearchButton';
+import ZaflixLogo from './ZaflixLogo';
 import UserViewNav from './userViews/UserViewNav';
 
 interface AppToolbarProps {
@@ -54,7 +54,7 @@ const AppToolbar: FC<AppToolbarProps> = ({
                     direction='row'
                     spacing={0.5}
                 >
-                    <ServerButton />
+                    <ZaflixLogo />
 
                     {!isPublicPath && (
                         <UserViewNav />

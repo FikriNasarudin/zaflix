@@ -51,9 +51,10 @@ const Home = () => {
         }
     }, [userViews]);
 
-    const [ searchParams ] = useSearchParams();
+    const [ searchParams, setSearchParams ] = useSearchParams();
     const initialTabIndex = parseInt(searchParams.get('tab') ?? '0', 10);
     const [categoryFilter, setCategoryFilter] = useState<'home' | 'movies' | 'shows' | 'mylist' | 'collections' | 'anime'>('home');
+    const syncingFromUrl = useRef(false);
     const [selectedDetailItem, setSelectedDetailItem] = useState<any>(null);
     const { isMobile } = useMediaQuery();
 
@@ -74,9 +75,9 @@ const Home = () => {
             { name: 'Home' },
             { name: 'Movies' },
             { name: 'TV Shows' },
+            { name: 'Anime' },
             { name: 'My List' },
-            { name: 'Collections' },
-            { name: 'Anime' }
+            { name: 'Collections' }
         ];
     };
 
@@ -119,9 +120,12 @@ const Home = () => {
 
     const onTabChange = useCallback((e: { detail: { selectedTabIndex: string; previousIndex: number | null }; }) => {
         const newIndex = parseInt(e.detail.selectedTabIndex, 10);
-        const categories: typeof categoryFilter[] = ['home', 'movies', 'shows', 'mylist', 'collections', 'anime'];
+        const categories: typeof categoryFilter[] = ['home', 'movies', 'shows', 'anime', 'mylist', 'collections'];
         setCategoryFilter(categories[newIndex]);
-    }, []);
+        if (!syncingFromUrl.current) {
+            setSearchParams({ tab: String(newIndex) }, { replace: true });
+        }
+    }, [setSearchParams]);
 
     const onSetTabs = useCallback(async () => {
         (await mainTabsManager).setTabs(element.current, initialTabIndex, getTabs, getTabContainers, null, onTabChange, false);
@@ -173,6 +177,24 @@ const Home = () => {
         };
     }, [ renderHome ]);
 
+    // Sync state with URL parameter changes dynamically
+    // Uses syncingFromUrl ref to prevent circular updates (tab change → setSearchParams → effect → m.selectedTabIndex → onTabChange → setSearchParams)
+    const tabParam = searchParams.get('tab');
+    useEffect(() => {
+        if (tabParam !== null) {
+            const index = parseInt(tabParam, 10);
+            if (!isNaN(index)) {
+                syncingFromUrl.current = true;
+                mainTabsManager.then((m) => {
+                    m.selectedTabIndex(index);
+                    syncingFromUrl.current = false;
+                });
+                const categories: typeof categoryFilter[] = ['home', 'movies', 'shows', 'anime', 'mylist', 'collections'];
+                setCategoryFilter(categories[index]);
+            }
+        }
+    }, [tabParam, mainTabsManager]);
+
     // Details Modal custom event triggers
     useEffect(() => {
         const handleOpenDetails = (_e: any, itemDetail: any) => {
@@ -189,9 +211,9 @@ const Home = () => {
             { id: 'home', label: 'Home' },
             { id: 'movies', label: 'Movies' },
             { id: 'shows', label: 'TV Shows' },
+            { id: 'anime', label: 'Anime' },
             { id: 'mylist', label: 'My List' },
-            { id: 'collections', label: 'Collections' },
-            { id: 'anime', label: 'Anime' }
+            { id: 'collections', label: 'Collections' }
         ];
 
         return (
@@ -283,12 +305,12 @@ const Home = () => {
                             <div className='zaflix-stagger-fade-in'>
                                 <Billboard filterType="Movie" />
                                 <NetworkSelector />
+                                <MediaRow title="Movie Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
                                 <MediaRow title="Continue Watching" itemsOverride={resumeItems.filter((i: any) => i.Type === 'Movie')} />
                                 <MediaRow title="Top 10 Movies" query={{ IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
-                                <MediaRow title="Suggested Movies" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
-                                <MediaRow title="Movie Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
-                                <MediaRow title="Recently Added Movies" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
-                                <MediaRow title="All Movies" query={{ SortBy: 'SortName', SortOrder: 'Ascending', Limit: 24, IncludeItemTypes: 'Movie', Recursive: true }} />
+                                <MediaRow title="Popular in Thriller" query={{ Genres: 'Thriller', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
+                                <MediaRow title="Popular in Science Fiction" query={{ Genres: 'Science Fiction', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
+                                <MediaRow title="Popular in Action" query={{ Genres: 'Action', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
                                 {movieLibraryId && (
                                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
                                         <button
@@ -327,9 +349,9 @@ const Home = () => {
                                 <NetworkSelector />
                                 <MediaRow title="Continue Watching" itemsOverride={resumeItems.filter((i: any) => i.Type === 'Series' || i.Type === 'Episode')} />
                                 <MediaRow title="Top 10 TV Shows" query={{ IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
-                                <MediaRow title="Suggested TV Shows" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
-                                <MediaRow title="Recently Added TV Shows" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
-                                <MediaRow title="All TV Shows" query={{ SortBy: 'SortName', SortOrder: 'Ascending', Limit: 24, IncludeItemTypes: 'Series', Recursive: true }} />
+                                <MediaRow title="Popular in Drama" query={{ Genres: 'Drama', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
+                                <MediaRow title="Popular in Sci-Fi & Fantasy" query={{ Genres: 'Sci-Fi & Fantasy', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
+                                <MediaRow title="Popular in Action & Adventure" query={{ Genres: 'Action & Adventure', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
                                 {showLibraryId && (
                                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
                                         <button
@@ -360,7 +382,18 @@ const Home = () => {
                     <div className='sections' style={{ display: 'none' }}></div>
                 </div>
 
-                <div className='tabContent pageTabContent' id='mylistTab' data-index='3'>
+                <div className='tabContent pageTabContent' id='animeTab' data-index='3'>
+                    <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
+                        {categoryFilter === 'anime' && (
+                            <div className='zaflix-stagger-fade-in'>
+                                <MediaRow title="Anime Movies & Shows" query={{ Genres: 'Anime', Limit: 30, Recursive: true }} />
+                            </div>
+                        )}
+                    </div>
+                    <div className='sections' style={{ display: 'none' }}></div>
+                </div>
+
+                <div className='tabContent pageTabContent' id='mylistTab' data-index='4'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'mylist' && (
                             <div className='zaflix-stagger-fade-in'>
@@ -371,22 +404,11 @@ const Home = () => {
                     <div className='sections' style={{ display: 'none' }}></div>
                 </div>
 
-                <div className='tabContent pageTabContent' id='collectionsTab' data-index='4'>
+                <div className='tabContent pageTabContent' id='collectionsTab' data-index='5'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'collections' && (
                             <div className='zaflix-stagger-fade-in'>
                                 <MediaRow title="My Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 30, Recursive: true }} />
-                            </div>
-                        )}
-                    </div>
-                    <div className='sections' style={{ display: 'none' }}></div>
-                </div>
-
-                <div className='tabContent pageTabContent' id='animeTab' data-index='5'>
-                    <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
-                        {categoryFilter === 'anime' && (
-                            <div className='zaflix-stagger-fade-in'>
-                                <MediaRow title="Anime Movies & Shows" query={{ Genres: 'Anime', Limit: 30, Recursive: true }} />
                             </div>
                         )}
                     </div>
