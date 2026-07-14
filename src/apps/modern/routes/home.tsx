@@ -59,10 +59,12 @@ const useMediaQuery = () => {
     };
 };
 
-/* ==========================================================================
-   Zaflix Video/Photo Billboard Slideshow Component with Clip Playback
-   ========================================================================== */
-const Billboard = () => {
+const apiCache = new Map<string, any>();
+
+interface BillboardProps {
+    filterType?: 'all' | 'Movie' | 'Series';
+}
+const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
     const { __legacyApiClient__: apiClient, user } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
     const [items, setItems] = useState<any[]>([]);
@@ -72,21 +74,29 @@ const Billboard = () => {
     useEffect(() => {
         if (!apiClient || !user || !user.Id) return;
 
+        const cacheKey = `${user.Id}_billboard_${filterType}`;
+        if (apiCache.has(cacheKey)) {
+            setItems(apiCache.get(cacheKey));
+            return;
+        }
+
         apiClient.getItems(user.Id, {
             SortBy: 'DateCreated',
             SortOrder: 'Descending',
             Limit: 15,
-            IncludeItemTypes: 'Movie,Series',
+            IncludeItemTypes: filterType === 'all' ? 'Movie,Series' : filterType,
             Recursive: true,
             Fields: 'Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData,Genres'
         }).then((result: any) => {
             if (result && result.Items) {
-                setItems(result.Items.filter((i: any) => i.Overview && i.BackdropImageTags && i.BackdropImageTags.length > 0));
+                const filtered = result.Items.filter((i: any) => i.Overview && i.BackdropImageTags && i.BackdropImageTags.length > 0);
+                apiCache.set(cacheKey, filtered);
+                setItems(filtered);
             }
         }).catch((err: any) => {
             console.error('[Billboard] failed to fetch items', err);
         });
-    }, [apiClient, user]);
+    }, [apiClient, user, filterType]);
 
     // Slideshow transition and video start timer
     useEffect(() => {
@@ -460,19 +470,31 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
     const [items, setItems] = useState<any[]>([]);
     const rowRef = useRef<HTMLDivElement>(null);
 
+    const queryString = JSON.stringify(query);
+
     useEffect(() => {
         if (!apiClient || !user || !user.Id) return;
+
+        const cacheKey = `${user.Id}_${title}_${queryString}`;
+        if (apiCache.has(cacheKey)) {
+            setItems(apiCache.get(cacheKey));
+            return;
+        }
+
+        const parsedQuery = JSON.parse(queryString);
+
         apiClient.getItems(user.Id, {
-            ...query,
+            ...parsedQuery,
             Fields: 'Overview,CommunityRating,ProductionYear,UserData,ImageTags'
         }).then((result: any) => {
             if (result && result.Items) {
+                apiCache.set(cacheKey, result.Items);
                 setItems(result.Items);
             }
         }).catch((err: any) => {
             console.error(`[MediaRow] failed to fetch row: ${title}`, err);
         });
-    }, [apiClient, user, query, title]);
+    }, [apiClient, user, queryString, title]);
 
     const scroll = (direction: 'left' | 'right') => {
         const container = rowRef.current;
@@ -510,8 +532,10 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
 
     if (items.length === 0) return null;
 
-    // Use 16:9 Landscape Aspect Ratio Card Widths (from user screenshots)
-    const cardWidth = isMobile ? '160px' : isTablet ? '220px' : '260px';
+    // Responsive Card Sizing: Vertical 2:3 on Mobile, Landscape 16:9 on Tablet/Desktop
+    const cardWidth = isMobile 
+        ? (isTop10 ? '145px' : '105px') 
+        : (isTablet ? (isTop10 ? '265px' : '220px') : (isTop10 ? '305px' : '260px'));
 
     return (
         <div style={{ marginBottom: '30px', position: 'relative', textAlign: 'left' }}>
@@ -564,15 +588,16 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                     }}
                 >
                     {items.map((item, index) => {
-                        // Fetch Backdrop image for Landscape layout, fallback to Primary
+                        // Mobile uses Primary poster (portrait), Tablet/Desktop uses Backdrop (landscape)
                         const imageUrl = apiClient 
-                            ? (item.BackdropImageTags && item.BackdropImageTags.length > 0
-                                ? apiClient.getUrl(`Items/${item.Id}/Images/Backdrop/0?quality=90`)
-                                : apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`))
+                            ? (isMobile 
+                                ? apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`)
+                                : (Array.isArray(item.BackdropImageTags) && item.BackdropImageTags.length > 0
+                                    ? apiClient.getUrl(`Items/${item.Id}/Images/Backdrop/0?quality=90`)
+                                    : apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`)))
                             : '';
                         
                         const handleItemClick = () => {
-                            // Trigger Details modal overlay
                             Events.trigger(document, 'open-zaflix-details', [item]);
                         };
 
@@ -584,7 +609,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                     flex: '0 0 auto',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    width: isTop10 ? `calc(${cardWidth} + 45px)` : cardWidth,
+                                    width: cardWidth,
                                     cursor: 'pointer',
                                     transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                                 }}
@@ -614,7 +639,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                 <div style={{
                                     position: 'relative',
                                     flex: 1,
-                                    paddingTop: '56.25%', // 16:9 Aspect Ratio
+                                    paddingTop: isMobile ? '150%' : '56.25%', // 2:3 on Mobile, 16:9 on Desktop/Tablet
                                     borderRadius: '8px',
                                     overflow: 'hidden',
                                     border: '1px solid rgba(211, 82, 255, 0.15)',
@@ -632,46 +657,50 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                         backgroundPosition: 'center'
                                     }} />
 
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: 0, left: 0, right: 0, bottom: 0,
-                                        background: 'linear-gradient(to top, rgba(10, 6, 20, 0.75) 0%, rgba(10, 6, 20, 0) 50%)',
-                                        zIndex: 2
-                                    }} />
-
-                                    {/* Logo Image Tag or Text Title Overlay on Card */}
-                                    {item.ImageTags && item.ImageTags.Logo ? (
-                                        <img 
-                                            src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=40`) || ''} 
-                                            style={{
-                                                maxHeight: isMobile ? '20px' : '28px',
-                                                maxWidth: '85%',
-                                                objectFit: 'contain',
+                                    {!isMobile && (
+                                        <>
+                                            <div style={{
                                                 position: 'absolute',
-                                                bottom: '10px',
-                                                left: '10px',
-                                                zIndex: 3
-                                            }} 
-                                            alt={item.Name} 
-                                        />
-                                    ) : (
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: '10px',
-                                            left: '10px',
-                                            zIndex: 3,
-                                            fontWeight: 'bold',
-                                            fontSize: isMobile ? '0.7rem' : '0.8rem',
-                                            color: '#fff',
-                                            textShadow: '0 1px 4px rgba(0,0,0,0.9)',
-                                            textAlign: 'left',
-                                            maxWidth: '90%',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
-                                        }}>
-                                            {item.Name}
-                                        </div>
+                                                top: 0, left: 0, right: 0, bottom: 0,
+                                                background: 'linear-gradient(to top, rgba(10, 6, 20, 0.75) 0%, rgba(10, 6, 20, 0) 50%)',
+                                                zIndex: 2
+                                            }} />
+
+                                            {/* Logo Image Tag or Text Title Overlay on Card - Desktop only */}
+                                            {item.ImageTags && item.ImageTags.Logo ? (
+                                                <img 
+                                                    src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=40`) || ''} 
+                                                    style={{
+                                                        maxHeight: '28px',
+                                                        maxWidth: '85%',
+                                                        objectFit: 'contain',
+                                                        position: 'absolute',
+                                                        bottom: '10px',
+                                                        left: '10px',
+                                                        zIndex: 3
+                                                    }} 
+                                                    alt={item.Name} 
+                                                />
+                                            ) : (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    bottom: '10px',
+                                                    left: '10px',
+                                                    zIndex: 3,
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.8rem',
+                                                    color: '#fff',
+                                                    textShadow: '0 1px 4px rgba(0,0,0,0.9)',
+                                                    textAlign: 'left',
+                                                    maxWidth: '90%',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {item.Name}
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -1309,7 +1338,12 @@ const Home = () => {
 
                         {categoryFilter === 'movies' && (
                             <>
-                                <MediaRow title="Top Picks Movies" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
+                                <Billboard filterType="Movie" />
+                                <NetworkSelector />
+                                <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary', IncludeItemTypes: 'Movie' }} />
+                                <MediaRow title="Top 10 Movies" query={{ IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
+                                <MediaRow title="Suggested Movies" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
+                                <MediaRow title="Movie Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
                                 <MediaRow title="Recently Added Movies" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
                                 <MediaRow title="All Movies" query={{ SortBy: 'SortName', SortOrder: 'Ascending', Limit: 24, IncludeItemTypes: 'Movie', Recursive: true }} />
                             </>
@@ -1317,7 +1351,11 @@ const Home = () => {
 
                         {categoryFilter === 'shows' && (
                             <>
-                                <MediaRow title="Top Picks TV Shows" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
+                                <Billboard filterType="Series" />
+                                <NetworkSelector />
+                                <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary', IncludeItemTypes: 'Series' }} />
+                                <MediaRow title="Top 10 TV Shows" query={{ IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
+                                <MediaRow title="Suggested TV Shows" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
                                 <MediaRow title="Recently Added TV Shows" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
                                 <MediaRow title="All TV Shows" query={{ SortBy: 'SortName', SortOrder: 'Ascending', Limit: 24, IncludeItemTypes: 'Series', Recursive: true }} />
                             </>
