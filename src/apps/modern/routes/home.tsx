@@ -1,4 +1,6 @@
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
+import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
+import { ItemFields } from '@jellyfin/sdk/lib/generated-client';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -20,6 +22,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 
 import '../../../elements/emby-tabs/emby-tabs';
 import '../../../elements/emby-button/emby-button';
@@ -70,6 +75,7 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
     const [items, setItems] = useState<any[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [playClip, setPlayClip] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
 
     useEffect(() => {
         if (!apiClient || !user || !user.Id) return;
@@ -95,6 +101,9 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
             }
         }).catch((err: any) => {
             console.error('[Billboard] failed to fetch items', err);
+            if (err && (err.status === 401 || err.statusCode === 401)) {
+                window.location.reload();
+            }
         });
     }, [apiClient, user, filterType]);
 
@@ -175,24 +184,50 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
 
             {/* Video Clip Playback */}
             {playClip && !isMobile && (
-                <video 
-                    src={streamUrl}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        opacity: 0.65,
-                        transition: 'opacity 1s ease',
-                        zIndex: 1
-                    }}
-                />
+                <>
+                    <video 
+                        src={streamUrl}
+                        autoPlay
+                        muted={isMuted}
+                        loop
+                        playsInline
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            opacity: 0.65,
+                            transition: 'opacity 1s ease',
+                            zIndex: 1
+                        }}
+                    />
+                    <button 
+                        onClick={() => setIsMuted((prev) => !prev)}
+                        style={{
+                            position: 'absolute',
+                            right: '70px',
+                            bottom: '25px',
+                            background: 'rgba(10, 6, 20, 0.65)',
+                            border: '1px solid rgba(211, 82, 255, 0.3)',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            width: '36px',
+                            height: '36px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 4,
+                            transition: 'transform 0.2s ease, background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                        {isMuted ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
+                    </button>
+                </>
             )}
             
             <div style={{
@@ -494,6 +529,9 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
             }
         }).catch((err: any) => {
             console.error(`[MediaRow] failed to fetch row: ${title}`, err);
+            if (err && (err.status === 401 || err.statusCode === 401)) {
+                window.location.reload();
+            }
         });
     }, [apiClient, user, queryString, title]);
 
@@ -531,10 +569,43 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
         }
     };
 
-    if (items.length === 0) return null;
+    // Use 2:3 Portrait Aspect Ratio Card Widths (from user screenshots)
+    const cardWidth = isMobile ? '105px' : isTablet ? '135px' : '150px';
 
-    // Use 16:9 Landscape Aspect Ratio Card Widths (from user screenshots)
-    const cardWidth = isMobile ? '160px' : isTablet ? '220px' : '260px';
+    if (items.length === 0) {
+        return (
+            <div style={{ marginBottom: '30px', position: 'relative', textAlign: 'left' }}>
+                <h2 style={{
+                    fontSize: isMobile ? '1.15rem' : '1.35rem',
+                    color: '#fff',
+                    marginBottom: '10px',
+                    paddingLeft: '2px',
+                    fontWeight: 700,
+                    textShadow: '0 0 10px rgba(211, 82, 255, 0.25)'
+                }}>{title}</h2>
+                
+                <div style={{ display: 'flex', gap: '12px', overflowX: 'hidden', padding: '8px 2px' }}>
+                    {[1, 2, 3, 4, 5].map((idx) => (
+                        <div 
+                            key={idx}
+                            style={{
+                                flex: '0 0 auto',
+                                width: cardWidth,
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: '1px solid rgba(211, 82, 255, 0.08)',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                                background: '#140d27',
+                                position: 'relative',
+                                paddingTop: '150%'
+                            }}
+                            className="skeleton-card"
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div 
@@ -595,11 +666,9 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                     }}
                 >
                     {items.map((item, index) => {
-                        // Fetch Backdrop image for Landscape layout, fallback to Primary
+                        // Fetch Primary image for Portrait layout
                         const imageUrl = apiClient 
-                            ? (item.BackdropImageTags && item.BackdropImageTags.length > 0
-                                ? apiClient.getUrl(`Items/${item.Id}/Images/Backdrop/0?quality=90`)
-                                : apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`))
+                            ? apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`)
                             : '';
                         
                         const handleItemClick = () => {
@@ -644,7 +713,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                 <div style={{
                                     position: 'relative',
                                     flex: 1,
-                                    paddingTop: '56.25%', // 16:9 Aspect Ratio
+                                    paddingTop: '150%', // 2:3 Aspect Ratio
                                     borderRadius: '8px',
                                     overflow: 'hidden',
                                     border: '1px solid rgba(211, 82, 255, 0.15)',
@@ -665,44 +734,9 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                     <div style={{
                                         position: 'absolute',
                                         top: 0, left: 0, right: 0, bottom: 0,
-                                        background: 'linear-gradient(to top, rgba(10, 6, 20, 0.75) 0%, rgba(10, 6, 20, 0) 50%)',
+                                        background: 'linear-gradient(to top, rgba(10, 6, 20, 0.5) 0%, rgba(10, 6, 20, 0) 40%)',
                                         zIndex: 2
                                     }} />
-
-                                    {/* Logo Image Tag or Text Title Overlay on Card */}
-                                    {item.ImageTags && item.ImageTags.Logo ? (
-                                        <img 
-                                            src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=40`) || ''} 
-                                            style={{
-                                                maxHeight: isMobile ? '20px' : '28px',
-                                                maxWidth: '85%',
-                                                objectFit: 'contain',
-                                                position: 'absolute',
-                                                bottom: '10px',
-                                                left: '10px',
-                                                zIndex: 3
-                                            }} 
-                                            alt={item.Name} 
-                                        />
-                                    ) : (
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: '10px',
-                                            left: '10px',
-                                            zIndex: 3,
-                                            fontWeight: 'bold',
-                                            fontSize: isMobile ? '0.7rem' : '0.8rem',
-                                            color: '#fff',
-                                            textShadow: '0 1px 4px rgba(0,0,0,0.9)',
-                                            textAlign: 'left',
-                                            maxWidth: '90%',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
-                                        }}>
-                                            {item.Name}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         );
@@ -750,7 +784,7 @@ interface DetailsModalProps {
     onClose: () => void;
 }
 const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
-    const { __legacyApiClient__: apiClient, user } = useApi();
+    const { __legacyApiClient__: apiClient, api, user } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
     const [seasons, setSeasons] = useState<any[]>([]);
     const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
@@ -759,6 +793,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const [parentCollections, setParentCollections] = useState<any[]>([]);
     const [adminMenuAnchor, setAdminMenuAnchor] = useState<boolean>(false);
     const [collectionItems, setCollectionItems] = useState<any[]>([]);
+    const [isFavorite, setIsFavorite] = useState<boolean>(item.UserData?.IsFavorite || false);
 
     useEffect(() => {
         if (!apiClient || !user || !user.Id || item.Type !== 'BoxSet') return;
@@ -776,17 +811,19 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     }, [apiClient, user, item]);
 
     useEffect(() => {
-        if (!apiClient || !user || !user.Id || item.Type === 'BoxSet') return;
+        if (!api || !user || !user.Id || item.Type === 'BoxSet') return;
 
-        apiClient.getJSON(apiClient.getUrl(`Items/${item.Id}/Collections?userId=${user.Id}`))
+        getLibraryApi(api)
+            .getItemCollections({
+                itemId: item.Id,
+                userId: user.Id,
+                fields: [ItemFields.PrimaryImageAspectRatio]
+            })
             .then((res: any) => {
-                if (res && Array.isArray(res.Items)) {
-                    setParentCollections(res.Items);
-                } else if (Array.isArray(res)) {
-                    setParentCollections(res);
-                }
-            }).catch(err => console.error('[DetailsModal] failed to fetch parent collections', err));
-    }, [apiClient, user, item]);
+                const fetchedCollections = res.data?.Items || [];
+                setParentCollections(fetchedCollections);
+            }).catch(err => console.error('[DetailsModal] failed to fetch parent collections via SDK', err));
+    }, [api, user, item]);
 
     // Fetch seasons if TV show
     useEffect(() => {
@@ -835,6 +872,17 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                 }
             }).catch(err => console.error('[DetailsModal] failed to load similar items', err));
     }, [apiClient, user, item]);
+
+    const handleToggleFavorite = () => {
+        if (!apiClient || !user || !user.Id) return;
+        const newFav = !isFavorite;
+        setIsFavorite(newFav);
+        apiClient.updateFavoriteStatus(user.Id!, item.Id, newFav)
+            .catch((err: any) => {
+                console.error('[DetailsModal] failed to update favorite status', err);
+                setIsFavorite(!newFav);
+            });
+    };
 
     const handlePlay = (mediaId = item.Id) => {
         if (!apiClient) return;
@@ -952,27 +1000,53 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             <PlayArrowIcon /> Play
                         </button>
 
+                        <button 
+                            onClick={handleToggleFavorite}
+                            style={{
+                                padding: '8px 16px',
+                                fontSize: '0.9rem',
+                                fontWeight: 'bold',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(211, 82, 255, 0.4)',
+                                background: 'rgba(10, 6, 20, 0.75)',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                height: '38px',
+                                boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                                transition: 'transform 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
+                            {isFavorite ? <FavoriteIcon style={{ color: '#ff2d55' }} /> : <FavoriteBorderIcon />}
+                            {isFavorite ? 'My List' : 'Add to List'}
+                        </button>
+
                         {user?.Policy?.IsAdministrator && (
                             <div style={{ position: 'relative' }}>
                                 <button 
                                     onClick={() => setAdminMenuAnchor(!adminMenuAnchor)}
                                     style={{
-                                        padding: '8px 16px',
-                                        fontSize: '0.9rem',
-                                        fontWeight: 'bold',
-                                        borderRadius: '6px',
-                                        border: '1px solid rgba(211, 82, 255, 0.4)',
                                         background: 'rgba(10, 6, 20, 0.75)',
+                                        border: '1px solid rgba(211, 82, 255, 0.4)',
                                         color: '#fff',
+                                        borderRadius: '50%',
+                                        width: '38px',
+                                        height: '38px',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '6px',
-                                        height: '38px',
-                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                                        justifyContent: 'center',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                                        transition: 'transform 0.2s ease'
                                     }}
+                                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                 >
-                                    Manage
+                                    <MoreHorizIcon />
                                 </button>
                                 {adminMenuAnchor && (
                                     <div style={{
@@ -1427,11 +1501,14 @@ const Home = () => {
     };
 
     const getTabs = () => {
-        return [{
-            name: globalize.translate('Home')
-        }, {
-            name: globalize.translate('Favorites')
-        }];
+        return [
+            { name: 'Home' },
+            { name: 'Movies' },
+            { name: 'TV Shows' },
+            { name: 'My List' },
+            { name: 'Collections' },
+            { name: 'Anime' }
+        ];
     };
 
     const getTabContainers = () => {
@@ -1468,32 +1545,14 @@ const Home = () => {
     }, [ tabControllers ]);
 
     const loadTab = useCallback((index: number, previousIndex: number | null) => {
-        getTabController(index).then((controller) => {
-            const refresh = !controller.refreshed;
-
-            controller.onResume({
-                autoFocus: previousIndex == null && layoutManager.tv,
-                refresh: refresh
-            });
-
-            controller.refreshed = true;
-            tabController.current = controller;
-        }).catch(err => {
-            console.error('[Home] failed to get tab controller', err);
-        });
-    }, [ getTabController ]);
+        // React handle tab routing, no legacy controller resume needed
+    }, []);
 
     const onTabChange = useCallback((e: { detail: { selectedTabIndex: string; previousIndex: number | null }; }) => {
         const newIndex = parseInt(e.detail.selectedTabIndex, 10);
-        const previousIndex = e.detail.previousIndex;
-
-        const previousTabController = previousIndex == null ? null : tabControllers[previousIndex];
-        if (previousTabController?.onPause) {
-            previousTabController.onPause();
-        }
-
-        loadTab(newIndex, previousIndex);
-    }, [ loadTab, tabControllers ]);
+        const categories: typeof categoryFilter[] = ['home', 'movies', 'shows', 'mylist', 'collections', 'anime'];
+        setCategoryFilter(categories[newIndex]);
+    }, []);
 
     const onSetTabs = useCallback(async () => {
         (await mainTabsManager).setTabs(element.current, initialTabIndex, getTabs, getTabContainers, null, onTabChange, false);
@@ -1617,6 +1676,41 @@ const Home = () => {
                 div::-webkit-scrollbar {
                     display: none !important;
                 }
+                /* Glassmorphic Top Navigation Header bar style matching Netflix */
+                .skinHeader-withBackground {
+                    background: rgba(10, 6, 20, 0.55) !important;
+                    backdrop-filter: blur(25px) !important;
+                    -webkit-backdrop-filter: blur(25px) !important;
+                    border-bottom: 1.5px solid rgba(211, 82, 255, 0.12) !important;
+                    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6) !important;
+                }
+                /* Style the top header tab items */
+                .headerTabs {
+                    background: none !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                }
+                .headerTabButton {
+                    font-weight: bold !important;
+                    font-size: 0.95rem !important;
+                    color: #dcd9fd !important;
+                    transition: color 0.2s ease, text-shadow 0.2s ease !important;
+                }
+                .headerTabButton-active {
+                    color: #c26df0 !important;
+                    text-shadow: 0 0 10px rgba(194, 109, 240, 0.6) !important;
+                    border-bottom: 2.5px solid #c26df0 !important;
+                }
+                /* Skeleton Loader Shimmer */
+                @keyframes skeletonShimmer {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
+                .skeleton-card {
+                    background: linear-gradient(90deg, #140d27 25%, #23173f 50%, #140d27 75%);
+                    background-size: 200% 100%;
+                    animation: skeletonShimmer 1.5s infinite linear;
+                }
             `}} />
 
             <Page
@@ -1631,9 +1725,6 @@ const Home = () => {
             >
                 <div className='tabContent pageTabContent' id='homeTab' data-index='0'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
-                        {renderCategoryBar()}
-
-                        {/* RENDER CATEGORY CONTENTS */}
                         {categoryFilter === 'home' && (
                             <>
                                 <Billboard />
@@ -1649,7 +1740,12 @@ const Home = () => {
                                 <MediaRow title="Recently Added TV Shows" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
                             </>
                         )}
+                    </div>
+                    <div className='sections' style={{ display: 'none' }}></div>
+                </div>
 
+                <div className='tabContent pageTabContent' id='moviesTab' data-index='1'>
+                    <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'movies' && (
                             <>
                                 <Billboard filterType="Movie" />
@@ -1695,7 +1791,12 @@ const Home = () => {
                                 )}
                             </>
                         )}
+                    </div>
+                    <div className='sections' style={{ display: 'none' }}></div>
+                </div>
 
+                <div className='tabContent pageTabContent' id='showsTab' data-index='2'>
+                    <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'shows' && (
                             <>
                                 <Billboard filterType="Series" />
@@ -1740,24 +1841,35 @@ const Home = () => {
                                 )}
                             </>
                         )}
+                    </div>
+                    <div className='sections' style={{ display: 'none' }}></div>
+                </div>
 
+                <div className='tabContent pageTabContent' id='mylistTab' data-index='3'>
+                    <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'mylist' && (
                             <MediaRow title="My Favorites List" query={{ Filters: 'IsFavorite', Limit: 30, Recursive: true }} />
                         )}
+                    </div>
+                    <div className='sections' style={{ display: 'none' }}></div>
+                </div>
 
+                <div className='tabContent pageTabContent' id='collectionsTab' data-index='4'>
+                    <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'collections' && (
                             <MediaRow title="My Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 30, Recursive: true }} />
                         )}
+                    </div>
+                    <div className='sections' style={{ display: 'none' }}></div>
+                </div>
 
+                <div className='tabContent pageTabContent' id='animeTab' data-index='5'>
+                    <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'anime' && (
                             <MediaRow title="Anime Movies & Shows" query={{ Genres: 'Anime', Limit: 30, Recursive: true }} />
                         )}
                     </div>
-                    {/* Hide default sections container */}
                     <div className='sections' style={{ display: 'none' }}></div>
-                </div>
-                <div className='tabContent pageTabContent' id='favoritesTab' data-index='1'>
-                    <div className='sections'></div>
                 </div>
             </Page>
 
