@@ -756,7 +756,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     useEffect(() => {
         if (!apiClient || !user || !user.Id || item.Type === 'BoxSet') return;
 
-        apiClient.getJSON(apiClient.getUrl(`Users/${user.Id}/Items/${item.Id}/Collections`))
+        apiClient.getJSON(apiClient.getUrl(`Items/${item.Id}/Collections?userId=${user.Id}`))
             .then((res: any) => {
                 if (res && res.Items) {
                     setParentCollections(res.Items);
@@ -922,6 +922,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                         {!isMobile && (
                             <div style={{
                                 width: '150px',
+                                height: '225px',
                                 flexShrink: 0,
                                 borderRadius: '8px',
                                 overflow: 'hidden',
@@ -930,7 +931,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             }}>
                                 <img 
                                     src={apiClient?.getUrl(`Items/${item.Id}/Images/Primary?quality=90`) || ''} 
-                                    style={{ width: '100%', height: 'auto', display: 'block' }} 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
                                     alt={item.Name}
                                 />
                             </div>
