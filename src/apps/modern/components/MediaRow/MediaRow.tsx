@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { useApi } from 'hooks/useApi';
 import Events from 'utils/events';
@@ -6,6 +6,7 @@ import Events from 'utils/events';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
+import { useCarouselDrag } from '../../hooks/useCarouselDrag';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useMediaRowItems } from '../../hooks/useMediaRowItems';
 import { ZAFlix } from '../../styles/theme';
@@ -19,12 +20,12 @@ interface MediaRowProps {
 const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
     const { __legacyApiClient__: apiClient } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
-    const { data: items = [] } = useMediaRowItems(title, query);
+    const { data: items = [], isPending } = useMediaRowItems(title, query);
     const [isHovered, setIsHovered] = useState(false);
-    const rowRef = useRef<HTMLDivElement>(null);
+    const { containerRef, isDragging, dragHandlers, globalListeners } = useCarouselDrag();
 
     const scroll = (direction: 'left' | 'right') => {
-        const container = rowRef.current;
+        const container = containerRef.current;
         if (!container) return;
 
         const scrollAmount = container.clientWidth * 0.8;
@@ -45,6 +46,19 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
         }
     };
 
+    // Global mouse move/up to support dragging outside the container
+    useEffect(() => {
+        if (!isDragging) return;
+        const onMove = (e: MouseEvent) => { globalListeners.onMouseMove(e.pageX); };
+        const onUp = () => { globalListeners.onMouseUp(); };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        return () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+        };
+    }, [isDragging, globalListeners]);
+
     const cardWidth = isMobile ? '105px' : isTablet ? '135px' : '150px';
 
     const titleStyle: React.CSSProperties = {
@@ -56,7 +70,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
         textShadow: ZAFlix.shadows.textGlowSubtle
     };
 
-    if (items.length === 0) {
+    if (isPending) {
         return (
             <div style={{ marginBottom: '30px', position: 'relative', textAlign: 'left' }}>
                 <h2 style={titleStyle}>{title}</h2>
@@ -81,6 +95,10 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                 </div>
             </div>
         );
+    }
+
+    if (!isPending && items.length === 0) {
+        return null;
     }
 
     return (
@@ -122,7 +140,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                 )}
 
                 <div
-                    ref={rowRef}
+                    ref={containerRef}
                     className='zaflix-hide-scrollbar'
                     style={{
                         display: 'flex',
@@ -130,8 +148,12 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                         overflowX: 'auto',
                         scrollBehavior: 'smooth',
                         padding: '8px 2px',
-                        WebkitOverflowScrolling: 'touch'
+                        WebkitOverflowScrolling: 'touch',
+                        scrollSnapType: 'x mandatory',
+                        cursor: isDragging ? 'grabbing' : 'grab',
+                        userSelect: isDragging ? 'none' : undefined
                     }}
+                    {...dragHandlers}
                 >
                     {items.map((item, index) => {
                         const imageUrl = apiClient
@@ -152,7 +174,8 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                     alignItems: 'center',
                                     width: isTop10 ? `calc(${cardWidth} + 45px)` : cardWidth,
                                     cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
+                                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                                    scrollSnapAlign: 'start'
                                 }}
                                 onMouseEnter={(e) => {
                                     if (!isMobile) e.currentTarget.style.transform = 'scale(1.05)';

@@ -33,12 +33,12 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const isSeries = item.Type === 'Series';
     const isBoxSet = item.Type === 'BoxSet';
 
-    const { data: seasons = [] } = useSeasons(isSeries ? item.Id : undefined);
+    const { data: seasons = [], isPending: isSeasonsPending } = useSeasons(isSeries ? item.Id : undefined);
     const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
-    const { data: episodes = [] } = useEpisodes(isSeries ? item.Id : undefined, selectedSeasonId);
-    const { data: similarItems = [] } = useSimilarItems(item.Id);
-    const { data: parentCollections = [] } = useItemCollections(isBoxSet ? undefined : item.Id);
-    const { data: collectionItems = [] } = useCollectionItems(isBoxSet ? item.Id : undefined);
+    const { data: episodes = [], isPending: isEpisodesPending } = useEpisodes(isSeries ? item.Id : undefined, selectedSeasonId);
+    const { data: similarItems = [], isPending: isSimilarPending } = useSimilarItems(item.Id);
+    const { data: parentCollections = [], isPending: isCollectionsPending } = useItemCollections(isBoxSet ? undefined : item.Id);
+    const { data: collectionItems = [], isPending: isBoxSetPending } = useCollectionItems(isBoxSet ? item.Id : undefined);
 
     const [adminMenuAnchor, setAdminMenuAnchor] = useState<boolean>(false);
     const [isFavorite, setIsFavorite] = useState<boolean>(item.UserData?.IsFavorite || false);
@@ -383,7 +383,40 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                     </div>
 
                     {/* TV Show Episodes Section */}
-                    {item.Type === 'Series' && (
+                    {item.Type === 'Series' && (isSeasonsPending || isEpisodesPending ? (
+                        <div style={{ marginTop: '20px' }}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                borderBottom: `1px solid ${ZAFlix.colors.border}`,
+                                paddingBottom: '12px',
+                                marginBottom: '15px'
+                            }}>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Episodes</h3>
+                                <div className='skeleton-card' style={{ width: 140, height: 34, borderRadius: 6 }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                {[1, 2, 3, 4, 5].map(i => (
+                                    <div key={i} style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '15px',
+                                        padding: '10px',
+                                        borderRadius: ZAFlix.radii.card,
+                                        background: 'rgba(20, 13, 39, 0.3)'
+                                    }}>
+                                        <div className='skeleton-card' style={{ width: 25, height: 20, borderRadius: 4 }} />
+                                        <div style={{ flex: 1 }}>
+                                            <div className='skeleton-card' style={{ width: '60%', height: 16, borderRadius: 4, marginBottom: 6 }} />
+                                            <div className='skeleton-card' style={{ width: '85%', height: 12, borderRadius: 4 }} />
+                                        </div>
+                                        <div className='skeleton-card' style={{ width: 24, height: 24, borderRadius: '50%' }} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
                         <div style={{ marginTop: '20px' }}>
                             <div style={{
                                 display: 'flex',
@@ -460,10 +493,30 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 ))}
                             </div>
                         </div>
-                    )}
+                    ))}
 
                     {/* Movies inside this Collection (for BoxSet items) */}
-                    {item.Type === 'BoxSet' && collectionItems.length > 0 && (
+                    {item.Type === 'BoxSet' && (isBoxSetPending ? (
+                        <div style={{ marginTop: '20px' }}>
+                            <h3 style={sectionTitleStyle}>Movies in this Collection</h3>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                                gap: '15px'
+                            }}>
+                                {[1, 2, 3].map(i => (
+                                    <div key={i}>
+                                        <div className='skeleton-card' style={{
+                                            width: '100%',
+                                            paddingTop: '150%',
+                                            borderRadius: ZAFlix.radii.card
+                                        }} />
+                                        <div className='skeleton-card' style={{ width: '70%', height: 14, borderRadius: 4, marginTop: 6 }} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : collectionItems.length > 0 && (
                         <div style={{ marginTop: '20px' }}>
                             <h3 style={sectionTitleStyle}>Movies in this Collection</h3>
                             <div style={{
@@ -510,10 +563,29 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 })}
                             </div>
                         </div>
-                    )}
-
-                    {/* Part of Collection Section */}
-                    {parentCollections.length > 0 && (
+                    ))}
+                    {isCollectionsPending ? (
+                        <div style={{ marginTop: '20px', marginBottom: '10px' }}>
+                            <h3 style={sectionTitleStyle}>Part of Collection</h3>
+                            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                                {[1, 2, 3].map(i => (
+                                    <div
+                                        key={i}
+                                        className='skeleton-card'
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            borderRadius: ZAFlix.radii.card,
+                                            padding: '8px 16px',
+                                            height: 76,
+                                            width: 200
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ) : parentCollections.length > 0 && (
                         <div style={{ marginTop: '20px', marginBottom: '10px' }}>
                             <h3 style={sectionTitleStyle}>Part of Collection</h3>
                             <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
@@ -559,9 +631,27 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             </div>
                         </div>
                     )}
-
-                    {/* More Like This */}
-                    {similarItems.length > 0 && (
+                    {isSimilarPending ? (
+                        <div style={{ marginTop: '25px' }}>
+                            <h3 style={sectionTitleStyle}>More Like This</h3>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                                gap: '15px'
+                            }}>
+                                {[1, 2, 3].map(i => (
+                                    <div key={i}>
+                                        <div className='skeleton-card' style={{
+                                            width: '100%',
+                                            paddingTop: '56.25%',
+                                            borderRadius: ZAFlix.radii.card
+                                        }} />
+                                        <div className='skeleton-card' style={{ width: '70%', height: 13, borderRadius: 4, marginTop: 6 }} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : similarItems.length > 0 && (
                         <div style={{ marginTop: '25px' }}>
                             <h3 style={sectionTitleStyle}>More Like This</h3>
                             <div style={{

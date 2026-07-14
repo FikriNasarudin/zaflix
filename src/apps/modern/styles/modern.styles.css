@@ -46,6 +46,24 @@
     animation: skeletonShimmer 1.5s infinite linear;
 }
 
+/* --- Staggered Fade-In for Section Lists --- */
+
+.zaflix-stagger-fade-in > * {
+    animation: slideUp 0.4s ease forwards;
+    opacity: 0;
+}
+
+.zaflix-stagger-fade-in > *:nth-child(1) { animation-delay: 0.03s; }
+.zaflix-stagger-fade-in > *:nth-child(2) { animation-delay: 0.06s; }
+.zaflix-stagger-fade-in > *:nth-child(3) { animation-delay: 0.09s; }
+.zaflix-stagger-fade-in > *:nth-child(4) { animation-delay: 0.12s; }
+.zaflix-stagger-fade-in > *:nth-child(5) { animation-delay: 0.15s; }
+.zaflix-stagger-fade-in > *:nth-child(6) { animation-delay: 0.18s; }
+.zaflix-stagger-fade-in > *:nth-child(7) { animation-delay: 0.21s; }
+.zaflix-stagger-fade-in > *:nth-child(8) { animation-delay: 0.24s; }
+.zaflix-stagger-fade-in > *:nth-child(9) { animation-delay: 0.27s; }
+.zaflix-stagger-fade-in > *:nth-child(10) { animation-delay: 0.30s; }
+
 /* --- Scrollbar Hiding --- */
 
 .zaflix-hide-scrollbar::-webkit-scrollbar {
@@ -55,6 +73,19 @@
 .zaflix-hide-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
+}
+
+/* --- Drag-to-Scroll Cursor --- */
+
+.zaflix-drag-cursor {
+    cursor: grab;
+    cursor: -webkit-grab;
+}
+
+.zaflix-drag-cursor:active,
+.zaflix-drag-cursor.zaflix-dragging {
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
 }
 
 /* --- Glassmorphic Header --- */
@@ -86,4 +117,130 @@
     color: #c26df0 !important;
     text-shadow: 0 0 10px rgba(194, 109, 240, 0.6) !important;
     border-bottom: 2.5px solid #c26df0 !important;
+}
+
+/* --- Video Player OSD Overrides (Netflix-Style) --- */
+
+#videoOsdPage .videoOsdBottom {
+    background: linear-gradient(0deg, rgba(10, 6, 20, 0.92) 0%, rgba(10, 6, 20, 0) 100%);
+    backdrop-filter: blur(12px);
+    border-top: 1.5px solid rgba(211, 82, 255, 0.1);
+}
+
+#videoOsdPage .videoOsdBottom .osdControls {
+    padding: 0 1.2em 1em;
+}
+
+#videoOsdPage .osdTitle {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    text-shadow: 0 0 12px rgba(194, 109, 240, 0.3);
+    color: #ffffff;
+    font-size: 1.15rem;
+}
+
+#videoOsdPage .osdPositionSlider::-webkit-slider-runnable-track {
+    height: 3px !important;
+    background: linear-gradient(90deg, #c26df0, #00f0ff) !important;
+    border-radius: 2px !important;
+}
+
+#videoOsdPage .osdPositionSlider::-moz-range-track {
+    height: 3px;
+    background: linear-gradient(90deg, #c26df0, #00f0ff);
+    border-radius: 2px;
+}
+
+#videoOsdPage .osdPositionSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #c26df0;
+    box-shadow: 0 0 8px rgba(194, 109, 240, 0.6);
+    margin-top: -4.5px;
+}
+
+#videoOsdPage .osdPositionSlider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #c26df0;
+    box-shadow: 0 0 8px rgba(194, 109, 240, 0.6);
+    border: none;
+}
+
+#videoOsdPage .videoOsdBottom .buttons button,
+#videoOsdPage .videoOsdBottom .buttons .emby-button {
+    color: #dcd9fd;
+    opacity: 0.85;
+    transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+#videoOsdPage .videoOsdBottom .buttons button:hover,
+#videoOsdPage .videoOsdBottom .buttons .emby-button:hover {
+    opacity: 1;
+    color: #c26df0;
+    transform: scale(1.1);
+}
+
+#videoOsdPage .osdTimeText {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #dcd9fd;
+}
+
+/* Up Next Dialog Zaflix restyle */
+#videoOsdPage .upNextContainer {
+    background: rgba(10, 6, 20, 0.88);
+    backdrop-filter: blur(25px);
+    border: 1.5px solid rgba(211, 82, 255, 0.2);
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(211, 82, 255, 0.1);
+}
+
+#videoOsdPage .upNextDialog-button {
+    background: linear-gradient(135deg, #00f0ff 0%, #d352ff 100%);
+    color: #fff;
+    font-weight: 700;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 18px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 15px rgba(211, 82, 255, 0.4);
+}
+
+#videoOsdPage .upNextDialog-button:hover {
+    transform: scale(1.05);
+}
+
+#videoOsdPage .upNextDialog-button-hide {
+    background: transparent;
+    color: #dcd9fd;
+    border: 1.5px solid rgba(211, 82, 255, 0.3);
+    box-shadow: none;
+}
+
+#videoOsdPage .upNextDialog-button-hide:hover {
+    background: rgba(211, 82, 255, 0.1);
+    border-color: rgba(211, 82, 255, 0.5);
+}
+
+#videoOsdPage .upNextDialog-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+#videoOsdPage .upNextDialog-countdownText {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    color: #c26df0;
+}
+
+/* SyncPlay overlay styling */
+#videoOsdPage .syncPlayContainer {
+    filter: drop-shadow(0 0 8px rgba(194, 109, 240, 0.4));
 }

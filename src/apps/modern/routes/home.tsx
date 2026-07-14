@@ -257,7 +257,7 @@ const Home = () => {
                 <div className='tabContent pageTabContent' id='homeTab' data-index='0'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'home' && (
-                            <>
+                            <div className='zaflix-stagger-fade-in'>
                                 <Billboard />
                                 <NetworkSelector />
                                 <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary' }} />
@@ -269,7 +269,7 @@ const Home = () => {
                                 <MediaRow title="Top 10 Anime" query={{ Genres: 'Anime', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
                                 <MediaRow title="Recently Added Movies" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
                                 <MediaRow title="Recently Added TV Shows" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
-                            </>
+                            </div>
                         )}
                     </div>
                     <div className='sections' style={{ display: 'none' }}></div>
@@ -278,7 +278,7 @@ const Home = () => {
                 <div className='tabContent pageTabContent' id='moviesTab' data-index='1'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'movies' && (
-                            <>
+                            <div className='zaflix-stagger-fade-in'>
                                 <Billboard filterType="Movie" />
                                 <NetworkSelector />
                                 <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary', IncludeItemTypes: 'Movie' }} />
@@ -311,7 +311,7 @@ const Home = () => {
                                         </button>
                                     </div>
                                 )}
-                            </>
+                            </div>
                         )}
                     </div>
                     <div className='sections' style={{ display: 'none' }}></div>
@@ -320,7 +320,7 @@ const Home = () => {
                 <div className='tabContent pageTabContent' id='showsTab' data-index='2'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'shows' && (
-                            <>
+                            <div className='zaflix-stagger-fade-in'>
                                 <Billboard filterType="Series" />
                                 <NetworkSelector />
                                 <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary', IncludeItemTypes: 'Series' }} />
@@ -352,7 +352,7 @@ const Home = () => {
                                         </button>
                                     </div>
                                 )}
-                            </>
+                            </div>
                         )}
                     </div>
                     <div className='sections' style={{ display: 'none' }}></div>
@@ -361,7 +361,9 @@ const Home = () => {
                 <div className='tabContent pageTabContent' id='mylistTab' data-index='3'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'mylist' && (
-                            <MediaRow title="My Favorites List" query={{ Filters: 'IsFavorite', Limit: 30, Recursive: true }} />
+                            <div className='zaflix-stagger-fade-in'>
+                                <MediaRow title="My Favorites List" query={{ Filters: 'IsFavorite', Limit: 30, Recursive: true }} />
+                            </div>
                         )}
                     </div>
                     <div className='sections' style={{ display: 'none' }}></div>
@@ -370,7 +372,9 @@ const Home = () => {
                 <div className='tabContent pageTabContent' id='collectionsTab' data-index='4'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'collections' && (
-                            <MediaRow title="My Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 30, Recursive: true }} />
+                            <div className='zaflix-stagger-fade-in'>
+                                <MediaRow title="My Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 30, Recursive: true }} />
+                            </div>
                         )}
                     </div>
                     <div className='sections' style={{ display: 'none' }}></div>
@@ -379,7 +383,9 @@ const Home = () => {
                 <div className='tabContent pageTabContent' id='animeTab' data-index='5'>
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'anime' && (
-                            <MediaRow title="Anime Movies & Shows" query={{ Genres: 'Anime', Limit: 30, Recursive: true }} />
+                            <div className='zaflix-stagger-fade-in'>
+                                <MediaRow title="Anime Movies & Shows" query={{ Genres: 'Anime', Limit: 30, Recursive: true }} />
+                            </div>
                         )}
                     </div>
                     <div className='sections' style={{ display: 'none' }}></div>

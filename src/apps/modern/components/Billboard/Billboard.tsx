@@ -11,8 +11,9 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useBillboardItems } from '../../hooks/useBillboardItems';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useSwipe } from '../../hooks/useSwipe';
 import { ZAFlix } from '../../styles/theme';
 
 interface BillboardProps {
@@ -22,10 +23,15 @@ interface BillboardProps {
 const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
     const { __legacyApiClient__: apiClient } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
-    const { data: items = [] } = useBillboardItems(filterType);
+    const { data: items = [], isPending } = useBillboardItems(filterType);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [playClip, setPlayClip] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
+
+    const swipeHandlers = useSwipe({
+        onSwipeLeft: () => setCurrentIndex((prev) => (prev + 1) % items.length),
+        onSwipeRight: () => setCurrentIndex((prev) => (prev - 1 + items.length) % items.length)
+    });
 
     // Slideshow transition and video start timer
     useEffect(() => {
@@ -45,6 +51,54 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
             clearInterval(slideTimer);
         };
     }, [currentIndex, items]);
+
+    const billboardHeight = isMobile ? '230px' : isTablet ? '350px' : '480px';
+
+    if (isPending) {
+        return (
+            <div style={{
+                width: '100%',
+                height: billboardHeight,
+                borderRadius: '12px',
+                overflow: 'hidden',
+                marginBottom: '20px',
+                position: 'relative'
+            }}>
+                <div className='skeleton-card' style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '12px'
+                }} />
+                <div style={{
+                    position: 'absolute',
+                    bottom: '12%',
+                    left: '5%',
+                    width: '90%',
+                    maxWidth: '650px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    <div className='skeleton-card' style={{ width: '60%', height: isMobile ? 28 : 40, borderRadius: 6 }} />
+                    <div className='skeleton-card' style={{ width: '40%', height: 16, borderRadius: 4 }} />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <div className='skeleton-card' style={{ width: 60, height: 14, borderRadius: 4 }} />
+                        <div className='skeleton-card' style={{ width: 40, height: 14, borderRadius: 4 }} />
+                    </div>
+                    {!isMobile && (
+                        <>
+                            <div className='skeleton-card' style={{ width: '90%', height: 14, borderRadius: 4 }} />
+                            <div className='skeleton-card' style={{ width: '70%', height: 14, borderRadius: 4 }} />
+                        </>
+                    )}
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                        <div className='skeleton-card' style={{ width: 100, height: 36, borderRadius: 6 }} />
+                        <div className='skeleton-card' style={{ width: 110, height: 36, borderRadius: 6 }} />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!items || items.length === 0) return null;
 
@@ -68,12 +122,12 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
         Events.trigger(document, 'open-zaflix-details', [currentItem]);
     };
 
-    const billboardHeight = isMobile ? '230px' : isTablet ? '350px' : '480px';
     const titleSize = isMobile ? '1.5rem' : isTablet ? '2.0rem' : '2.6rem';
 
     return (
         <div
             className='zaflix-fade-in'
+            {...swipeHandlers}
             style={{
                 position: 'relative',
                 width: '100%',
@@ -327,6 +381,39 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
                         <ChevronRightIcon />
                     </button>
                 </>
+            )}
+
+            {/* Dot Indicators */}
+            {items.length > 1 && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: isMobile ? '6px' : '14px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    gap: '8px',
+                    zIndex: 5
+                }}>
+                    {items.map((_, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setCurrentIndex(idx)}
+                            style={{
+                                width: idx === currentIndex ? '22px' : '8px',
+                                height: '8px',
+                                borderRadius: '4px',
+                                border: 'none',
+                                background: idx === currentIndex
+                                    ? ZAFlix.gradients.accent
+                                    : 'rgba(255, 255, 255, 0.25)',
+                                cursor: 'pointer',
+                                padding: 0,
+                                transition: 'all 0.3s ease'
+                            }}
+                            aria-label={`Slide ${idx + 1}`}
+                        />
+                    ))}
+                </div>
             )}
         </div>
     );
