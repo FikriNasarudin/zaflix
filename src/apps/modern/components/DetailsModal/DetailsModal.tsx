@@ -3,6 +3,7 @@ import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import React, { useEffect, useState } from 'react';
 
 import { useApi } from 'hooks/useApi';
+import { useToggleFavoriteMutation } from 'hooks/useFetchItems';
 import { playbackManager } from 'components/playback/playbackmanager';
 import Events from 'utils/events';
 
@@ -13,6 +14,11 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useCollectionItems } from '../../hooks/useCollectionItems';
+import { useEpisodes } from '../../hooks/useEpisodes';
+import { useItemCollections } from '../../hooks/useItemCollections';
+import { useSeasons } from '../../hooks/useSeasons';
+import { useSimilarItems } from '../../hooks/useSimilarItems';
 import { ZAFlix } from '../../styles/theme';
 
 interface DetailsModalProps {
@@ -21,104 +27,38 @@ interface DetailsModalProps {
 }
 
 const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
-    const { __legacyApiClient__: apiClient, api, user } = useApi();
+    const { __legacyApiClient__: apiClient, user } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
-    const [seasons, setSeasons] = useState<any[]>([]);
+
+    const isSeries = item.Type === 'Series';
+    const isBoxSet = item.Type === 'BoxSet';
+
+    const { data: seasons = [] } = useSeasons(isSeries ? item.Id : undefined);
     const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
-    const [episodes, setEpisodes] = useState<any[]>([]);
-    const [similarItems, setSimilarItems] = useState<any[]>([]);
-    const [parentCollections, setParentCollections] = useState<any[]>([]);
+    const { data: episodes = [] } = useEpisodes(isSeries ? item.Id : undefined, selectedSeasonId);
+    const { data: similarItems = [] } = useSimilarItems(item.Id);
+    const { data: parentCollections = [] } = useItemCollections(isBoxSet ? undefined : item.Id);
+    const { data: collectionItems = [] } = useCollectionItems(isBoxSet ? item.Id : undefined);
+
     const [adminMenuAnchor, setAdminMenuAnchor] = useState<boolean>(false);
-    const [collectionItems, setCollectionItems] = useState<any[]>([]);
     const [isFavorite, setIsFavorite] = useState<boolean>(item.UserData?.IsFavorite || false);
+    const toggleFavoriteMutation = useToggleFavoriteMutation();
 
+    // Set initial selected season when seasons load
     useEffect(() => {
-        if (!apiClient || !user || !user.Id || item.Type !== 'BoxSet') return;
-
-        apiClient.getItems(user.Id, {
-            ParentId: item.Id,
-            Fields: 'Overview,CommunityRating,ProductionYear,UserData,ImageTags'
-        }).then((res: any) => {
-            if (res && Array.isArray(res.Items)) {
-                setCollectionItems(res.Items);
-            } else if (Array.isArray(res)) {
-                setCollectionItems(res);
-            }
-        }).catch(err => console.error('[DetailsModal] failed to fetch collection items', err));
-    }, [apiClient, user, item]);
-
-    useEffect(() => {
-        if (!api || !user || !user.Id || item.Type === 'BoxSet') return;
-
-        getLibraryApi(api)
-            .getItemCollections({
-                itemId: item.Id,
-                userId: user.Id,
-                fields: [ItemFields.PrimaryImageAspectRatio]
-            })
-            .then((res: any) => {
-                const fetchedCollections = res.data?.Items || [];
-                setParentCollections(fetchedCollections);
-            }).catch(err => console.error('[DetailsModal] failed to fetch parent collections via SDK', err));
-    }, [api, user, item]);
-
-    // Fetch seasons if TV show
-    useEffect(() => {
-        if (!apiClient || !user || !user.Id || item.Type !== 'Series') return;
-
-        apiClient.getSeasons(item.Id, { userId: user.Id })
-            .then((res: any) => {
-                if (res && Array.isArray(res.Items)) {
-                    setSeasons(res.Items);
-                    if (res.Items.length > 0) {
-                        setSelectedSeasonId(res.Items[0].Id);
-                    }
-                } else if (Array.isArray(res)) {
-                    setSeasons(res);
-                    if (res.length > 0) {
-                        setSelectedSeasonId(res[0].Id);
-                    }
-                }
-            }).catch(err => console.error('[DetailsModal] failed to load seasons', err));
-    }, [apiClient, user, item]);
-
-    // Fetch episodes when selected season changes
-    useEffect(() => {
-        if (!apiClient || !user || !user.Id || !selectedSeasonId) return;
-
-        apiClient.getEpisodes(item.Id, { seasonId: selectedSeasonId, userId: user.Id, Fields: 'Overview' })
-            .then((res: any) => {
-                if (res && Array.isArray(res.Items)) {
-                    setEpisodes(res.Items);
-                } else if (Array.isArray(res)) {
-                    setEpisodes(res);
-                }
-            }).catch(err => console.error('[DetailsModal] failed to load episodes', err));
-    }, [apiClient, user, selectedSeasonId, item]);
-
-    // Fetch similar items (More Like This)
-    useEffect(() => {
-        if (!apiClient || !user || !user.Id) return;
-
-        apiClient.getJSON(apiClient.getUrl(`Items/${item.Id}/Similar?limit=6&userId=${user.Id}`))
-            .then((res: any) => {
-                if (res && Array.isArray(res.Items)) {
-                    setSimilarItems(res.Items);
-                } else if (Array.isArray(res)) {
-                    setSimilarItems(res);
-                }
-            }).catch(err => console.error('[DetailsModal] failed to load similar items', err));
-    }, [apiClient, user, item]);
+        if (seasons.length > 0 && !selectedSeasonId) {
+            setSelectedSeasonId(seasons[0].Id);
+        }
+    }, [seasons, selectedSeasonId]);
 
     const handleToggleFavorite = () => {
-        if (!apiClient || !user || !user.Id) return;
+        if (!user || !user.Id) return;
         const newFav = !isFavorite;
         setIsFavorite(newFav);
-        apiClient.updateFavoriteStatus(user.Id!, item.Id, newFav)
-            .catch((err: any) => {
-                console.error('[DetailsModal] failed to update favorite status', err);
-                setIsFavorite(!newFav);
-            });
+        toggleFavoriteMutation.mutate(
+            { itemId: item.Id, isFavorite: newFav },
+            { onError: () => setIsFavorite(!newFav) }
+        );
     };
 
     const handlePlay = (mediaId = item.Id) => {

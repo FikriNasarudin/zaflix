@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { useApi } from 'hooks/useApi';
 import Events from 'utils/events';
@@ -7,7 +7,8 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { getCached, getCacheKey, setCache, ZAFlix } from '../../styles/theme';
+import { useMediaRowItems } from '../../hooks/useMediaRowItems';
+import { ZAFlix } from '../../styles/theme';
 
 interface MediaRowProps {
     title: string;
@@ -16,41 +17,11 @@ interface MediaRowProps {
 }
 
 const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
-    const { __legacyApiClient__: apiClient, user } = useApi();
+    const { __legacyApiClient__: apiClient } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
-    const [items, setItems] = useState<any[]>([]);
+    const { data: items = [] } = useMediaRowItems(title, query);
     const [isHovered, setIsHovered] = useState(false);
     const rowRef = useRef<HTMLDivElement>(null);
-
-    const queryString = JSON.stringify(query);
-
-    useEffect(() => {
-        if (!apiClient || !user || !user.Id) return;
-
-        const cacheKey = getCacheKey(user.Id, title, queryString);
-        const cached = getCached<any[]>(cacheKey);
-        if (cached) {
-            setItems(cached);
-            return;
-        }
-
-        const parsedQuery = JSON.parse(queryString);
-
-        apiClient.getItems(user.Id, {
-            ...parsedQuery,
-            Fields: 'Overview,CommunityRating,ProductionYear,UserData,ImageTags'
-        }).then((result: any) => {
-            if (result && result.Items) {
-                setCache(cacheKey, result.Items);
-                setItems(result.Items);
-            }
-        }).catch((err: any) => {
-            console.error(`[MediaRow] failed to fetch row: ${title}`, err);
-            if (err && (err.status === 401 || err.statusCode === 401)) {
-                window.location.reload();
-            }
-        });
-    }, [apiClient, user, queryString, title]);
 
     const scroll = (direction: 'left' | 'right') => {
         const container = rowRef.current;

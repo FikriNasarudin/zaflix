@@ -12,50 +12,20 @@ import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { getCached, getCacheKey, setCache, ZAFlix } from '../../styles/theme';
+import { useBillboardItems } from '../../hooks/useBillboardItems';
+import { ZAFlix } from '../../styles/theme';
 
 interface BillboardProps {
     filterType?: 'all' | 'Movie' | 'Series';
 }
 
 const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
-    const { __legacyApiClient__: apiClient, user } = useApi();
+    const { __legacyApiClient__: apiClient } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
-    const [items, setItems] = useState<any[]>([]);
+    const { data: items = [] } = useBillboardItems(filterType);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [playClip, setPlayClip] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
-
-    useEffect(() => {
-        if (!apiClient || !user || !user.Id) return;
-
-        const cacheKey = getCacheKey(user.Id, 'billboard', filterType);
-        const cached = getCached<any[]>(cacheKey);
-        if (cached) {
-            setItems(cached);
-            return;
-        }
-
-        apiClient.getItems(user.Id, {
-            SortBy: 'DateCreated',
-            SortOrder: 'Descending',
-            Limit: 15,
-            IncludeItemTypes: filterType === 'all' ? 'Movie,Series' : filterType,
-            Recursive: true,
-            Fields: 'Overview,CommunityRating,ProductionYear,RunTimeTicks,UserData,Genres'
-        }).then((result: any) => {
-            if (result && result.Items) {
-                const filtered = result.Items.filter((i: any) => i.Overview && i.BackdropImageTags && i.BackdropImageTags.length > 0);
-                setCache(cacheKey, filtered);
-                setItems(filtered);
-            }
-        }).catch((err: any) => {
-            console.error('[Billboard] failed to fetch items', err);
-            if (err && (err.status === 401 || err.statusCode === 401)) {
-                window.location.reload();
-            }
-        });
-    }, [apiClient, user, filterType]);
 
     // Slideshow transition and video start timer
     useEffect(() => {

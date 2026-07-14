@@ -6,11 +6,12 @@ import { clearBackdrop } from '../../../components/backdrop/backdrop';
 import Page from '../../../components/Page';
 import { EventType } from 'constants/eventType';
 import Events from 'utils/events';
-import { useApi } from 'hooks/useApi';
 
 import '../../../elements/emby-tabs/emby-tabs';
 import '../../../elements/emby-button/emby-button';
 import '../../../elements/emby-scroller/emby-scroller';
+
+import { useUserViews } from 'hooks/api/useUserViews';
 
 import Billboard from '../components/Billboard/Billboard';
 import DetailsModal from '../components/DetailsModal/DetailsModal';
@@ -35,22 +36,18 @@ type ControllerProps = {
 };
 
 const Home = () => {
-    const { __legacyApiClient__: apiClient, user } = useApi();
+    const { data: userViews } = useUserViews();
     const [movieLibraryId, setMovieLibraryId] = useState<string | null>(null);
     const [showLibraryId, setShowLibraryId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!apiClient || !user || !user.Id) return;
-        apiClient.getJSON(apiClient.getUrl('UserViews?userId=' + user.Id))
-            .then((res: any) => {
-                if (res && res.Items) {
-                    const movies = res.Items.find((i: any) => i.CollectionType === 'movies');
-                    const tvshows = res.Items.find((i: any) => i.CollectionType === 'tvshows');
-                    if (movies) setMovieLibraryId(movies.Id);
-                    if (tvshows) setShowLibraryId(tvshows.Id);
-                }
-            }).catch(err => console.error('[Home] failed to load user views', err));
-    }, [apiClient, user]);
+        if (userViews?.Items) {
+            const movies = userViews.Items.find((i: any) => i.CollectionType === 'movies');
+            const tvshows = userViews.Items.find((i: any) => i.CollectionType === 'tvshows');
+            if (movies) setMovieLibraryId(movies.Id ?? null);
+            if (tvshows) setShowLibraryId(tvshows.Id ?? null);
+        }
+    }, [userViews]);
 
     const [ searchParams ] = useSearchParams();
     const initialTabIndex = parseInt(searchParams.get('tab') ?? '0', 10);
