@@ -41,6 +41,9 @@ export const Component = () => {
                     height: '100%'
                 }}
             >
+                <a href='#main-content' className='zaflix-skip-link'>
+                    Skip to content
+                </a>
                 <StrictMode>
                     <OffsetAppBar dense elevation={4}>
                         <AppToolbar
@@ -64,6 +67,7 @@ export const Component = () => {
 
                 <Box
                     component='main'
+                    id='main-content'
                     sx={{
                         position: 'relative',
                         width: '100%',

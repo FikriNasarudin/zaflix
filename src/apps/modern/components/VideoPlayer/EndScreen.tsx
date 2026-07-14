@@ -55,6 +55,15 @@ const EndScreen: React.FC = () => {
         setNextItem(null);
     }, [clearTimer]);
 
+    const handleOverlayKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            handleClose();
+        } else if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handlePlayNext();
+        }
+    }, [handleClose, handlePlayNext]);
+
     useEffect(() => {
         if (countdown === 0 && nextItem) {
             handlePlayNext();
@@ -99,18 +108,24 @@ const EndScreen: React.FC = () => {
     const offset = circumference * (1 - countdown / 10);
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(5, 3, 10, 0.85)',
-            zIndex: 2000,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'flex-end',
-            padding: '0 5% 8%',
-            animation: 'zaflixFadeIn 0.3s ease forwards'
-        }}>
-            <div style={{
+        <div
+            role='dialog'
+            aria-label='Up next'
+            tabIndex={-1}
+            onKeyDown={handleOverlayKeyDown}
+            style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(5, 3, 10, 0.85)',
+                zIndex: 2000,
+                display: 'flex',
+                alignItems: 'flex-end',
+                justifyContent: 'flex-end',
+                padding: '0 5% 8%',
+                animation: 'zaflixFadeIn 0.3s ease forwards'
+            }}
+        >
+            <div className='will-change-transform' style={{
                 display: 'flex',
                 gap: '24px',
                 maxWidth: 520,
@@ -133,6 +148,9 @@ const EndScreen: React.FC = () => {
                         <img
                             src={imageUrl}
                             alt={nextItem.Name || ''}
+                            loading='lazy'
+                            className='zaflix-image-fade-in'
+                            onLoad={(e) => e.currentTarget.classList.add('loaded')}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                     ) : (
@@ -281,4 +299,4 @@ const EndScreen: React.FC = () => {
     );
 };
 
-export default EndScreen;
+export default React.memo(EndScreen);

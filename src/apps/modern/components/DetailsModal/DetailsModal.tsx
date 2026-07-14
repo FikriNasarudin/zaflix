@@ -338,6 +338,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             }}>
                                 <img
                                     src={apiClient?.getUrl(`Items/${item.Id}/Images/Primary?quality=90`) || ''}
+                                    loading='lazy'
+                                    className='zaflix-image-fade-in'
+                                    onLoad={(e) => e.currentTarget.classList.add('loaded')}
                                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                     alt={item.Name}
                                 />
@@ -347,6 +350,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             {item.ImageTags && item.ImageTags.Logo ? (
                                 <img
                                     src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=80`) || ''}
+                                    loading='lazy'
+                                    className='zaflix-image-fade-in'
+                                    onLoad={(e) => e.currentTarget.classList.add('loaded')}
                                     style={{
                                         maxHeight: isMobile ? '50px' : '75px',
                                         maxWidth: '90%',
@@ -453,6 +459,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                     <div
                                         key={ep.Id}
                                         onClick={() => handlePlay(ep.Id)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePlay(ep.Id); } }}
+                                        role='button'
+                                        tabIndex={0}
+                                        className='zaflix-focus-visible'
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -532,6 +542,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         <div
                                             key={colItem.Id}
                                             onClick={() => Events.trigger(document, 'open-zaflix-details', [colItem])}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Events.trigger(document, 'open-zaflix-details', [colItem]); } }}
+                                            role='button'
+                                            tabIndex={0}
+                                            className='zaflix-focus-visible will-change-transform'
                                             style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
                                             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -595,6 +609,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         <div
                                             key={col.Id}
                                             onClick={() => Events.trigger(document, 'open-zaflix-details', [col])}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Events.trigger(document, 'open-zaflix-details', [col]); } }}
+                                            role='button'
+                                            tabIndex={0}
+                                            className='zaflix-focus-visible'
                                             style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -620,6 +638,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                             {colUrl && (
                                                 <img
                                                     src={colUrl}
+                                                    loading='lazy'
+                                                    className='zaflix-image-fade-in'
+                                                    onLoad={(e) => e.currentTarget.classList.add('loaded')}
                                                     style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }}
                                                     alt={col.Name}
                                                 />
@@ -669,6 +690,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         <div
                                             key={similarItem.Id}
                                             onClick={() => Events.trigger(document, 'open-zaflix-details', [similarItem])}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Events.trigger(document, 'open-zaflix-details', [similarItem]); } }}
+                                            role='button'
+                                            tabIndex={0}
+                                            className='zaflix-focus-visible will-change-transform'
                                             style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
                                             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -707,4 +732,4 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     );
 };
 
-export default DetailsModal;
+export default React.memo(DetailsModal);

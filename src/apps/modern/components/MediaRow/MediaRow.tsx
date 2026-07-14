@@ -168,6 +168,10 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                             <div
                                 key={item.Id}
                                 onClick={handleItemClick}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleItemClick(); } }}
+                                role='button'
+                                tabIndex={0}
+                                className='zaflix-focus-visible will-change-transform'
                                 style={{
                                     flex: '0 0 auto',
                                     display: 'flex',
@@ -210,16 +214,20 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                     boxShadow: ZAFlix.shadows.card,
                                     background: ZAFlix.colors.card
                                 }}>
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        bottom: 0,
-                                        backgroundImage: `url(${imageUrl})`,
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center'
-                                    }} />
+                                    <img
+                                        src={imageUrl}
+                                        alt={item.Name || ''}
+                                        loading='lazy'
+                                        className='zaflix-image-fade-in'
+                                        onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0, left: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
                                     <div style={{
                                         position: 'absolute',
                                         top: 0, left: 0, right: 0, bottom: 0,
@@ -265,4 +273,4 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
     );
 };
 
-export default MediaRow;
+export default React.memo(MediaRow);

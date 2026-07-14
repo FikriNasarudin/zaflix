@@ -2,26 +2,45 @@
    Zaflix Modern App - Shared Styles
    ========================================================================== */
 
+/* --- Reduced Motion --- */
+
+@media (prefers-reduced-motion: reduce) {
+    .zaflix-fade-in,
+    .zaflix-slide-up,
+    .zaflix-modal-enter,
+    .zaflix-stagger-fade-in > *,
+    .skeleton-card,
+    .zaflix-image-fade-in {
+        animation: none !important;
+        transition: none !important;
+    }
+    .skeleton-card {
+        background: #140d27 !important;
+    }
+}
+
 /* --- Keyframe Animations --- */
 
-@keyframes zaflixFadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes zaflixFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 
-@keyframes skeletonShimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
+    @keyframes skeletonShimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
 
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
 
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 }
 
 /* --- Utility Classes --- */
@@ -63,6 +82,49 @@
 .zaflix-stagger-fade-in > *:nth-child(8) { animation-delay: 0.24s; }
 .zaflix-stagger-fade-in > *:nth-child(9) { animation-delay: 0.27s; }
 .zaflix-stagger-fade-in > *:nth-child(10) { animation-delay: 0.30s; }
+
+/* --- Image Fade-In on Load --- */
+
+.zaflix-image-fade-in {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+.zaflix-image-fade-in.loaded {
+    opacity: 1;
+}
+
+/* --- GPU Acceleration Hint --- */
+
+.will-change-transform {
+    will-change: transform;
+}
+
+/* --- Skip-to-Content Link --- */
+
+.zaflix-skip-link {
+    position: fixed;
+    top: -100%;
+    left: 16px;
+    z-index: 10000;
+    padding: 8px 16px;
+    background: #c26df0;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 6px;
+    text-decoration: none;
+}
+.zaflix-skip-link:focus {
+    top: 16px;
+}
+
+/* --- Focus Ring for Interactive Elements --- */
+
+.zaflix-focus-visible:focus-visible {
+    outline: 2.5px solid #c26df0;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
 
 /* --- Scrollbar Hiding --- */
 

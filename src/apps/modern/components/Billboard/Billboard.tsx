@@ -124,10 +124,22 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
 
     const titleSize = isMobile ? '1.5rem' : isTablet ? '2.0rem' : '2.6rem';
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            setCurrentIndex((prev) => (prev + 1) % items.length);
+        }
+    };
+
     return (
         <div
-            className='zaflix-fade-in'
+            className='zaflix-fade-in will-change-transform'
             {...swipeHandlers}
+            onKeyDown={handleKeyDown}
+            tabIndex={0}
             style={{
                 position: 'relative',
                 width: '100%',
@@ -136,11 +148,12 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
                 overflow: 'hidden',
                 marginBottom: '20px',
                 background: ZAFlix.colors.card,
-                transition: 'height 0.3s ease'
+                transition: 'height 0.3s ease',
+                outline: 'none'
             }}
         >
             {/* Backdrop Image */}
-            <div style={{
+            <div className='will-change-transform' style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
@@ -239,6 +252,9 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
                 {currentItem.ImageTags && currentItem.ImageTags.Logo ? (
                     <img
                         src={apiClient?.getUrl(`Items/${currentItem.Id}/Images/Logo?maxHeight=120`) || ''}
+                        loading='lazy'
+                        className='zaflix-image-fade-in'
+                        onLoad={(e) => e.currentTarget.classList.add('loaded')}
                         style={{
                             maxHeight: isMobile ? '60px' : '100px',
                             maxWidth: '90%',
@@ -419,4 +435,4 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
     );
 };
 
-export default Billboard;
+export default React.memo(Billboard);

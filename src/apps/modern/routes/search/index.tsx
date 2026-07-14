@@ -28,6 +28,115 @@ const SkeletonCard = () => (
     </div>
 );
 
+const SearchCard: React.FC<{ hint: SearchHint; cardW: number; cardH: number; isPerson: boolean; onSelect: (hint: SearchHint) => void; getImageUrl: (hint: SearchHint) => string }> = React.memo(({ hint, cardW, cardH, isPerson, onSelect, getImageUrl }) => {
+    const handleClick = () => onSelect(hint);
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect(hint);
+        }
+    };
+    return (
+        <div
+            key={hint.Id}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            role='button'
+            tabIndex={0}
+            className='zaflix-focus-visible will-change-transform'
+            style={{
+                minWidth: cardW,
+                width: cardW,
+                flexShrink: 0,
+                scrollSnapAlign: 'start',
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                borderRadius: ZAFlix.radii.card
+            }}
+            onMouseEnter={e => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = ZAFlix.shadows.cardHover;
+            }}
+            onMouseLeave={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+            }}
+        >
+            <div style={{
+                width: cardW,
+                height: cardH,
+                borderRadius: ZAFlix.radii.card,
+                overflow: 'hidden',
+                position: 'relative',
+                background: ZAFlix.colors.card
+            }}>
+                {hint.PrimaryImageTag ? (
+                    <img
+                        src={getImageUrl(hint)}
+                        alt={hint.Name || ''}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                        }}
+                        loading="lazy"
+                    />
+                ) : (
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: ZAFlix.colors.textSecondary,
+                        fontSize: 36,
+                        fontWeight: 700,
+                        background: ZAFlix.gradients.accentSoft
+                    }}>
+                        {hint.Name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                )}
+                {hint.Type && !isPerson && (
+                    <span style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        background: 'rgba(10,6,20,0.8)',
+                        color: ZAFlix.colors.accentLight,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        padding: '3px 8px',
+                        borderRadius: 4,
+                        border: `1px solid ${ZAFlix.colors.borderSubtle}`,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5
+                    }}>
+                        {hint.Type === BaseItemKind.Movie ? 'Movie' :
+                         hint.Type === BaseItemKind.Series ? 'TV' :
+                         hint.Type === BaseItemKind.Episode ? 'EP' : ''}
+                    </span>
+                )}
+            </div>
+            <div style={{ padding: '8px 2px' }}>
+                <p style={{
+                    margin: 0,
+                    color: ZAFlix.colors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                }}>{hint.Name}</p>
+                {hint.ProductionYear && (
+                    <p style={{
+                        margin: '2px 0 0',
+                        color: ZAFlix.colors.textSecondary,
+                        fontSize: 12
+                    }}>{hint.ProductionYear}</p>
+                )}
+            </div>
+        </div>
+    );
+});
+
 const SearchPage: FC = () => {
     const navigate = useNavigate();
     const { __legacyApiClient__: apiClient } = useApi();
@@ -241,101 +350,15 @@ const SearchPage: FC = () => {
                                         const cardW = isPerson ? 130 : 170;
                                         const cardH = isPerson ? 170 : 255;
                                         return (
-                                            <div
+                                            <SearchCard
                                                 key={hint.Id}
-                                                onClick={() => handleSelect(hint)}
-                                                style={{
-                                                    minWidth: cardW,
-                                                    width: cardW,
-                                                    flexShrink: 0,
-                                                    scrollSnapAlign: 'start',
-                                                    cursor: 'pointer',
-                                                    transition: 'transform 0.2s, box-shadow 0.2s',
-                                                    borderRadius: ZAFlix.radii.card
-                                                }}
-                                                onMouseEnter={e => {
-                                                    e.currentTarget.style.transform = 'scale(1.05)';
-                                                    e.currentTarget.style.boxShadow = ZAFlix.shadows.cardHover;
-                                                }}
-                                                onMouseLeave={e => {
-                                                    e.currentTarget.style.transform = 'scale(1)';
-                                                    e.currentTarget.style.boxShadow = 'none';
-                                                }}
-                                            >
-                                                <div style={{
-                                                    width: cardW,
-                                                    height: cardH,
-                                                    borderRadius: ZAFlix.radii.card,
-                                                    overflow: 'hidden',
-                                                    position: 'relative',
-                                                    background: ZAFlix.colors.card
-                                                }}>
-                                                    {hint.PrimaryImageTag ? (
-                                                        <img
-                                                            src={getImageUrl(hint)}
-                                                            alt={hint.Name || ''}
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'cover'
-                                                            }}
-                                                            loading="lazy"
-                                                        />
-                                                    ) : (
-                                                        <div style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            color: ZAFlix.colors.textSecondary,
-                                                            fontSize: 36,
-                                                            fontWeight: 700,
-                                                            background: ZAFlix.gradients.accentSoft
-                                                        }}>
-                                                            {hint.Name?.[0]?.toUpperCase() || '?'}
-                                                        </div>
-                                                    )}
-                                                    {hint.Type && !isPerson && (
-                                                        <span style={{
-                                                            position: 'absolute',
-                                                            top: 8,
-                                                            right: 8,
-                                                            background: 'rgba(10,6,20,0.8)',
-                                                            color: ZAFlix.colors.accentLight,
-                                                            fontSize: 10,
-                                                            fontWeight: 600,
-                                                            padding: '3px 8px',
-                                                            borderRadius: 4,
-                                                            border: `1px solid ${ZAFlix.colors.borderSubtle}`,
-                                                            textTransform: 'uppercase',
-                                                            letterSpacing: 0.5
-                                                        }}>
-                                                            {hint.Type === BaseItemKind.Movie ? 'Movie' :
-                                                             hint.Type === BaseItemKind.Series ? 'TV' :
-                                                             hint.Type === BaseItemKind.Episode ? 'EP' : ''}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div style={{ padding: '8px 2px' }}>
-                                                    <p style={{
-                                                        margin: 0,
-                                                        color: ZAFlix.colors.textPrimary,
-                                                        fontSize: 13,
-                                                        fontWeight: 500,
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap'
-                                                    }}>{hint.Name}</p>
-                                                    {hint.ProductionYear && (
-                                                        <p style={{
-                                                            margin: '2px 0 0',
-                                                            color: ZAFlix.colors.textSecondary,
-                                                            fontSize: 12
-                                                        }}>{hint.ProductionYear}</p>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                hint={hint}
+                                                cardW={cardW}
+                                                cardH={cardH}
+                                                isPerson={isPerson}
+                                                onSelect={handleSelect}
+                                                getImageUrl={getImageUrl}
+                                            />
                                         );
                                     })}
                                 </div>
