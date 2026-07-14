@@ -27,12 +27,12 @@ const queryCache = new QueryCache({
         const status = requestError?.response?.status || requestError?.status || requestError?.statusCode;
         if (status === HTTP_UNAUTHORIZED) {
             try {
-                // If a query fails due to authorization, cancel it and remove it from the cache to prevent showing
-                // unauthorized data.
-                void queryClient.cancelQueries({ queryKey });
-                queryClient.setQueryData(queryKey, null);
+                // Clear all query caches to prevent infinite spinner loops on token expiry
+                queryClient.clear();
+                // Notify the app that the session has expired so it can redirect to login
+                document.dispatchEvent(new CustomEvent('session-expired'));
             } catch (e) {
-                console.warn('[QueryCache] failed to remove unauthorized data', e);
+                console.warn('[QueryCache] failed to handle unauthorized', e);
             }
         }
     }

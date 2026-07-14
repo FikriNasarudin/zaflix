@@ -13,14 +13,17 @@ import { ZAFlix } from '../../styles/theme';
 
 interface MediaRowProps {
     title: string;
-    query: any;
+    query?: any;
     isTop10?: boolean;
+    itemsOverride?: any[];
 }
 
-const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
+const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverride }) => {
     const { __legacyApiClient__: apiClient } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
-    const { data: items = [], isPending } = useMediaRowItems(title, query);
+    const internal = useMediaRowItems(title, query);
+    const items = itemsOverride ?? internal.data ?? [];
+    const isPending = itemsOverride ? false : internal.isPending;
     const [isHovered, setIsHovered] = useState(false);
     const { containerRef, isDragging, dragHandlers, globalListeners } = useCarouselDrag();
 
@@ -146,18 +149,20 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                         display: 'flex',
                         gap: '12px',
                         overflowX: 'auto',
-                        scrollBehavior: 'smooth',
                         padding: '8px 2px',
                         WebkitOverflowScrolling: 'touch',
-                        scrollSnapType: 'x mandatory',
+                        scrollSnapType: 'x proximity',
+                        touchAction: 'pan-y',
                         cursor: isDragging ? 'grabbing' : 'grab',
                         userSelect: isDragging ? 'none' : undefined
                     }}
                     {...dragHandlers}
                 >
                     {items.map((item, index) => {
+                        const isEpisode = item.Type === 'Episode';
+                        const imageTag = isEpisode ? (item.ImageTags?.Thumb || item.ImageTags?.Primary) : item.ImageTags?.Primary;
                         const imageUrl = apiClient
-                            ? apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`)
+                            ? apiClient.getUrl(`Items/${item.Id}/Images/${isEpisode && item.ImageTags?.Thumb ? 'Thumb' : 'Primary'}?quality=90${imageTag ? `&tag=${imageTag}` : ''}`)
                             : '';
 
                         const handleItemClick = () => {

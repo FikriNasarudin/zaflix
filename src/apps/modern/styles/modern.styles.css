@@ -306,3 +306,14 @@
 #videoOsdPage .syncPlayContainer {
     filter: drop-shadow(0 0 8px rgba(194, 109, 240, 0.4));
 }
+
+/* --- Mobile Landscape OSD Sizing --- */
+
+@media (orientation: landscape) and (max-height: 50em) {
+    .skinHeader-withBackground.osdHeader {
+        height: 3.5em !important;
+    }
+    .videoOsdBottom {
+        padding-top: 3.5em !important;
+    }
+}

@@ -13,7 +13,7 @@ export const useEpisodes = (seriesId?: string, seasonId?: string) => {
             const result = await apiClient.getEpisodes(seriesId, {
                 seasonId,
                 userId: user.Id,
-                Fields: 'Overview'
+                Fields: 'Overview,CommunityRating,ProductionYear,UserData,ImageTags'
             });
 
             if (result && Array.isArray(result.Items)) return result.Items as any[];

@@ -477,9 +477,26 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(194, 109, 240, 0.08)'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(20, 13, 39, 0.3)'}
                                     >
-                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: ZAFlix.colors.accent, width: '25px', textAlign: 'center' }}>
-                                            {idx + 1}
-                                        </span>
+                                        {ep.ImageTags?.Primary ? (
+                                            <img
+                                                src={apiClient?.getUrl(`Items/${ep.Id}/Images/Primary?quality=80&width=120`)}
+                                                alt=''
+                                                loading='lazy'
+                                                className='zaflix-image-fade-in'
+                                                onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                                style={{
+                                                    width: '70px',
+                                                    height: '52px',
+                                                    borderRadius: '4px',
+                                                    objectFit: 'cover',
+                                                    flexShrink: 0
+                                                }}
+                                            />
+                                        ) : (
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: ZAFlix.colors.accent, width: '25px', textAlign: 'center' }}>
+                                                {idx + 1}
+                                            </span>
+                                        )}
                                         <div style={{ flex: 1, textAlign: 'left' }}>
                                             <div style={{ fontWeight: 'bold', fontSize: '0.95rem', color: ZAFlix.colors.textPrimary }}>
                                                 {ep.Name}
@@ -509,13 +526,17 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                     {item.Type === 'BoxSet' && (isBoxSetPending ? (
                         <div style={{ marginTop: '20px' }}>
                             <h3 style={sectionTitleStyle}>Movies in this Collection</h3>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-                                gap: '15px'
+                            <div className='zaflix-hide-scrollbar' style={{
+                                display: 'flex',
+                                gap: '12px',
+                                overflowX: 'auto',
+                                paddingBottom: '8px',
+                                WebkitOverflowScrolling: 'touch',
+                                scrollSnapType: 'x proximity',
+                                touchAction: 'pan-y'
                             }}>
-                                {[1, 2, 3].map(i => (
-                                    <div key={i}>
+                                {[1, 2, 3, 4].map(i => (
+                                    <div key={i} style={{ flex: '0 0 auto', width: '120px' }}>
                                         <div className='skeleton-card' style={{
                                             width: '100%',
                                             paddingTop: '150%',
@@ -529,10 +550,14 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                     ) : collectionItems.length > 0 && (
                         <div style={{ marginTop: '20px' }}>
                             <h3 style={sectionTitleStyle}>Movies in this Collection</h3>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-                                gap: '15px'
+                            <div className='zaflix-hide-scrollbar' style={{
+                                display: 'flex',
+                                gap: '12px',
+                                overflowX: 'auto',
+                                padding: '4px 2px 8px',
+                                WebkitOverflowScrolling: 'touch',
+                                scrollSnapType: 'x proximity',
+                                touchAction: 'pan-y'
                             }}>
                                 {collectionItems.map((colItem: any) => {
                                     const colItemPoster = apiClient
@@ -546,8 +571,14 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                             role='button'
                                             tabIndex={0}
                                             className='zaflix-focus-visible will-change-transform'
-                                            style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                                            style={{
+                                                flex: '0 0 auto',
+                                                width: '120px',
+                                                cursor: 'pointer',
+                                                scrollSnapAlign: 'start',
+                                                transition: 'transform 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                         >
                                             <div style={{
@@ -563,7 +594,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                             }} />
                                             <div style={{
                                                 marginTop: '6px',
-                                                fontSize: '0.85rem',
+                                                fontSize: '0.8rem',
                                                 fontWeight: 'bold',
                                                 textAlign: 'left',
                                                 overflow: 'hidden',
@@ -664,7 +695,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                     <div key={i}>
                                         <div className='skeleton-card' style={{
                                             width: '100%',
-                                            paddingTop: '56.25%',
+                                            paddingTop: '150%',
                                             borderRadius: ZAFlix.radii.card
                                         }} />
                                         <div className='skeleton-card' style={{ width: '70%', height: 13, borderRadius: 4, marginTop: 6 }} />
@@ -682,9 +713,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             }}>
                                 {similarItems.map((similarItem) => {
                                     const similarPoster = apiClient
-                                        ? (similarItem.BackdropImageTags && similarItem.BackdropImageTags.length > 0
-                                            ? apiClient.getUrl(`Items/${similarItem.Id}/Images/Backdrop/0?quality=80`)
-                                            : apiClient.getUrl(`Items/${similarItem.Id}/Images/Primary?quality=80`))
+                                        ? apiClient.getUrl(`Items/${similarItem.Id}/Images/Primary?quality=80`)
                                         : '';
                                     return (
                                         <div
@@ -700,7 +729,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         >
                                             <div style={{
                                                 position: 'relative',
-                                                paddingTop: '56.25%',
+                                                paddingTop: '150%',
                                                 borderRadius: ZAFlix.radii.card,
                                                 overflow: 'hidden',
                                                 border: '1px solid rgba(211, 82, 255, 0.15)',

@@ -11,6 +11,7 @@ import ThemeCss from 'components/ThemeCss';
 import { useApi } from 'hooks/useApi';
 
 import AppToolbar from './components/AppToolbar';
+import BottomNav from './components/BottomNav/BottomNav';
 import AppDrawer, { isDrawerPath } from './components/drawers/AppDrawer';
 import LibraryToolbar from './features/libraries/components/LibraryToolbar';
 import { LibraryProvider } from './features/libraries/hooks/useLibrary';
@@ -71,13 +72,15 @@ export const Component = () => {
                     sx={{
                         position: 'relative',
                         width: '100%',
-                        flexGrow: 1
+                        flexGrow: 1,
+                        paddingBottom: { xs: '60px', md: 0 }
                     }}
                 >
                     <AppBody>
                         <Outlet />
                     </AppBody>
                 </Box>
+                <BottomNav />
             </Box>
             <ThemeCss />
             <CustomCss />

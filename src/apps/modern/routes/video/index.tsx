@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 
 import EndScreen from '../../components/VideoPlayer/EndScreen';
 import { ZAFlix } from '../../styles/theme';
+import 'components/playback/playbackorientation';
 
 const SHORTCUT_HINTS = [
     { key: 'Space', label: 'Play/Pause' },

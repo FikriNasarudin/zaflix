@@ -18,6 +18,7 @@ import DetailsModal from '../components/DetailsModal/DetailsModal';
 import MediaRow from '../components/MediaRow/MediaRow';
 import NetworkSelector from '../components/NetworkSelector/NetworkSelector';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useResumeItems } from '../hooks/useResumeItems';
 import { ZAFlix } from '../styles/theme';
 import '../styles/modern.styles.css';
 
@@ -37,6 +38,7 @@ type ControllerProps = {
 
 const Home = () => {
     const { data: userViews } = useUserViews();
+    const { data: resumeItems = [] } = useResumeItems({ limit: 12 });
     const [movieLibraryId, setMovieLibraryId] = useState<string | null>(null);
     const [showLibraryId, setShowLibraryId] = useState<string | null>(null);
 
@@ -260,7 +262,7 @@ const Home = () => {
                             <div className='zaflix-stagger-fade-in'>
                                 <Billboard />
                                 <NetworkSelector />
-                                <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary' }} />
+                                {resumeItems.length > 0 && <MediaRow title="Continue Watching" itemsOverride={resumeItems} />}
                                 <MediaRow title="Suggested for You" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie,Series', Recursive: true }} />
                                 <MediaRow title="My List" query={{ Filters: 'IsFavorite', Limit: 12, Recursive: true }} />
                                 <MediaRow title="Featured Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
@@ -281,7 +283,7 @@ const Home = () => {
                             <div className='zaflix-stagger-fade-in'>
                                 <Billboard filterType="Movie" />
                                 <NetworkSelector />
-                                <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary', IncludeItemTypes: 'Movie' }} />
+                                <MediaRow title="Continue Watching" itemsOverride={resumeItems.filter((i: any) => i.Type === 'Movie')} />
                                 <MediaRow title="Top 10 Movies" query={{ IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
                                 <MediaRow title="Suggested Movies" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
                                 <MediaRow title="Movie Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
@@ -323,7 +325,7 @@ const Home = () => {
                             <div className='zaflix-stagger-fade-in'>
                                 <Billboard filterType="Series" />
                                 <NetworkSelector />
-                                <MediaRow title="Continue Watching" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 10, Recursive: true, Filters: 'IsNotFolder', ImageTypes: 'Primary', IncludeItemTypes: 'Series' }} />
+                                <MediaRow title="Continue Watching" itemsOverride={resumeItems.filter((i: any) => i.Type === 'Series' || i.Type === 'Episode')} />
                                 <MediaRow title="Top 10 TV Shows" query={{ IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
                                 <MediaRow title="Suggested TV Shows" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
                                 <MediaRow title="Recently Added TV Shows" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
