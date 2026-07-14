@@ -152,6 +152,14 @@ class AppRouter {
                 options = arguments[1];
             }
 
+            if (window.location.hash.includes('/modern') && item.Type !== 'CollectionFolder' && item.Type !== 'UserView') {
+                const event = new CustomEvent('open-zaflix-details', {
+                    detail: item
+                });
+                document.dispatchEvent(event);
+                return;
+            }
+
             const url = this.getRouteUrl(item, options);
             this.show(url);
         }

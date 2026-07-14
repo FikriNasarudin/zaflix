@@ -468,6 +468,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
     const { __legacyApiClient__: apiClient, user } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
     const [items, setItems] = useState<any[]>([]);
+    const [isHovered, setIsHovered] = useState(false);
     const rowRef = useRef<HTMLDivElement>(null);
 
     const queryString = JSON.stringify(query);
@@ -532,13 +533,15 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
 
     if (items.length === 0) return null;
 
-    // Responsive Card Sizing: Vertical 2:3 on Mobile, Landscape 16:9 on Tablet/Desktop
-    const cardWidth = isMobile 
-        ? (isTop10 ? '145px' : '105px') 
-        : (isTablet ? (isTop10 ? '265px' : '220px') : (isTop10 ? '305px' : '260px'));
+    // Use 16:9 Landscape Aspect Ratio Card Widths (from user screenshots)
+    const cardWidth = isMobile ? '160px' : isTablet ? '220px' : '260px';
 
     return (
-        <div style={{ marginBottom: '30px', position: 'relative', textAlign: 'left' }}>
+        <div 
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{ marginBottom: '30px', position: 'relative', textAlign: 'left' }}
+        >
             <h2 style={{
                 fontSize: isMobile ? '1.15rem' : '1.35rem',
                 color: '#fff',
@@ -554,23 +557,27 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                         onClick={() => scroll('left')}
                         style={{
                             position: 'absolute',
-                            left: '-10px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'rgba(10, 6, 20, 0.75)',
-                            border: '1px solid rgba(211, 82, 255, 0.3)',
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            background: 'rgba(10, 6, 20, 0.45)',
+                            border: 'none',
                             color: '#fff',
-                            borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
+                            width: '45px',
                             cursor: 'pointer',
-                            zIndex: 3,
+                            zIndex: 5,
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            opacity: isHovered ? 1 : 0,
+                            transition: 'opacity 0.3s ease, background 0.2s ease',
+                            borderTopLeftRadius: '8px',
+                            borderBottomLeftRadius: '8px'
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(10, 6, 20, 0.8)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(10, 6, 20, 0.45)'}
                     >
-                        <ChevronLeftIcon fontSize="small" />
+                        <ChevronLeftIcon fontSize="large" />
                     </button>
                 )}
 
@@ -588,13 +595,11 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                     }}
                 >
                     {items.map((item, index) => {
-                        // Mobile uses Primary poster (portrait), Tablet/Desktop uses Backdrop (landscape)
+                        // Fetch Backdrop image for Landscape layout, fallback to Primary
                         const imageUrl = apiClient 
-                            ? (isMobile 
-                                ? apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`)
-                                : (Array.isArray(item.BackdropImageTags) && item.BackdropImageTags.length > 0
-                                    ? apiClient.getUrl(`Items/${item.Id}/Images/Backdrop/0?quality=90`)
-                                    : apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`)))
+                            ? (item.BackdropImageTags && item.BackdropImageTags.length > 0
+                                ? apiClient.getUrl(`Items/${item.Id}/Images/Backdrop/0?quality=90`)
+                                : apiClient.getUrl(`Items/${item.Id}/Images/Primary?quality=90`))
                             : '';
                         
                         const handleItemClick = () => {
@@ -609,7 +614,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                     flex: '0 0 auto',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    width: cardWidth,
+                                    width: isTop10 ? `calc(${cardWidth} + 45px)` : cardWidth,
                                     cursor: 'pointer',
                                     transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                                 }}
@@ -639,7 +644,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                 <div style={{
                                     position: 'relative',
                                     flex: 1,
-                                    paddingTop: isMobile ? '150%' : '56.25%', // 2:3 on Mobile, 16:9 on Desktop/Tablet
+                                    paddingTop: '56.25%', // 16:9 Aspect Ratio
                                     borderRadius: '8px',
                                     overflow: 'hidden',
                                     border: '1px solid rgba(211, 82, 255, 0.15)',
@@ -657,50 +662,46 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                                         backgroundPosition: 'center'
                                     }} />
 
-                                    {!isMobile && (
-                                        <>
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: 0, left: 0, right: 0, bottom: 0,
-                                                background: 'linear-gradient(to top, rgba(10, 6, 20, 0.75) 0%, rgba(10, 6, 20, 0) 50%)',
-                                                zIndex: 2
-                                            }} />
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0, left: 0, right: 0, bottom: 0,
+                                        background: 'linear-gradient(to top, rgba(10, 6, 20, 0.75) 0%, rgba(10, 6, 20, 0) 50%)',
+                                        zIndex: 2
+                                    }} />
 
-                                            {/* Logo Image Tag or Text Title Overlay on Card - Desktop only */}
-                                            {item.ImageTags && item.ImageTags.Logo ? (
-                                                <img 
-                                                    src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=40`) || ''} 
-                                                    style={{
-                                                        maxHeight: '28px',
-                                                        maxWidth: '85%',
-                                                        objectFit: 'contain',
-                                                        position: 'absolute',
-                                                        bottom: '10px',
-                                                        left: '10px',
-                                                        zIndex: 3
-                                                    }} 
-                                                    alt={item.Name} 
-                                                />
-                                            ) : (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    bottom: '10px',
-                                                    left: '10px',
-                                                    zIndex: 3,
-                                                    fontWeight: 'bold',
-                                                    fontSize: '0.8rem',
-                                                    color: '#fff',
-                                                    textShadow: '0 1px 4px rgba(0,0,0,0.9)',
-                                                    textAlign: 'left',
-                                                    maxWidth: '90%',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap'
-                                                }}>
-                                                    {item.Name}
-                                                </div>
-                                            )}
-                                        </>
+                                    {/* Logo Image Tag or Text Title Overlay on Card */}
+                                    {item.ImageTags && item.ImageTags.Logo ? (
+                                        <img 
+                                            src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=40`) || ''} 
+                                            style={{
+                                                maxHeight: isMobile ? '20px' : '28px',
+                                                maxWidth: '85%',
+                                                objectFit: 'contain',
+                                                position: 'absolute',
+                                                bottom: '10px',
+                                                left: '10px',
+                                                zIndex: 3
+                                            }} 
+                                            alt={item.Name} 
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '10px',
+                                            left: '10px',
+                                            zIndex: 3,
+                                            fontWeight: 'bold',
+                                            fontSize: isMobile ? '0.7rem' : '0.8rem',
+                                            color: '#fff',
+                                            textShadow: '0 1px 4px rgba(0,0,0,0.9)',
+                                            textAlign: 'left',
+                                            maxWidth: '90%',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {item.Name}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -713,23 +714,27 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10 }) => {
                         onClick={() => scroll('right')}
                         style={{
                             position: 'absolute',
-                            right: '-10px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'rgba(10, 6, 20, 0.75)',
-                            border: '1px solid rgba(211, 82, 255, 0.3)',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            background: 'rgba(10, 6, 20, 0.45)',
+                            border: 'none',
                             color: '#fff',
-                            borderRadius: '50%',
-                            width: '32px',
-                            height: '32px',
+                            width: '45px',
                             cursor: 'pointer',
-                            zIndex: 3,
+                            zIndex: 5,
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            opacity: isHovered ? 1 : 0,
+                            transition: 'opacity 0.3s ease, background 0.2s ease',
+                            borderTopRightRadius: '8px',
+                            borderBottomRightRadius: '8px'
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(10, 6, 20, 0.8)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(10, 6, 20, 0.45)'}
                     >
-                        <ChevronRightIcon fontSize="small" />
+                        <ChevronRightIcon fontSize="large" />
                     </button>
                 )}
             </div>
@@ -752,14 +757,33 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const [episodes, setEpisodes] = useState<any[]>([]);
     const [similarItems, setSimilarItems] = useState<any[]>([]);
     const [parentCollections, setParentCollections] = useState<any[]>([]);
+    const [adminMenuAnchor, setAdminMenuAnchor] = useState<boolean>(false);
+    const [collectionItems, setCollectionItems] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!apiClient || !user || !user.Id || item.Type !== 'BoxSet') return;
+
+        apiClient.getItems(user.Id, {
+            ParentId: item.Id,
+            Fields: 'Overview,CommunityRating,ProductionYear,UserData,ImageTags'
+        }).then((res: any) => {
+            if (res && Array.isArray(res.Items)) {
+                setCollectionItems(res.Items);
+            } else if (Array.isArray(res)) {
+                setCollectionItems(res);
+            }
+        }).catch(err => console.error('[DetailsModal] failed to fetch collection items', err));
+    }, [apiClient, user, item]);
 
     useEffect(() => {
         if (!apiClient || !user || !user.Id || item.Type === 'BoxSet') return;
 
         apiClient.getJSON(apiClient.getUrl(`Items/${item.Id}/Collections?userId=${user.Id}`))
             .then((res: any) => {
-                if (res && res.Items) {
+                if (res && Array.isArray(res.Items)) {
                     setParentCollections(res.Items);
+                } else if (Array.isArray(res)) {
+                    setParentCollections(res);
                 }
             }).catch(err => console.error('[DetailsModal] failed to fetch parent collections', err));
     }, [apiClient, user, item]);
@@ -770,10 +794,15 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
 
         apiClient.getSeasons(item.Id, { userId: user.Id })
             .then((res: any) => {
-                if (res && res.Items) {
+                if (res && Array.isArray(res.Items)) {
                     setSeasons(res.Items);
                     if (res.Items.length > 0) {
                         setSelectedSeasonId(res.Items[0].Id);
+                    }
+                } else if (Array.isArray(res)) {
+                    setSeasons(res);
+                    if (res.length > 0) {
+                        setSelectedSeasonId(res[0].Id);
                     }
                 }
             }).catch(err => console.error('[DetailsModal] failed to load seasons', err));
@@ -785,8 +814,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
 
         apiClient.getEpisodes(item.Id, { seasonId: selectedSeasonId, userId: user.Id, Fields: 'Overview' })
             .then((res: any) => {
-                if (res && res.Items) {
+                if (res && Array.isArray(res.Items)) {
                     setEpisodes(res.Items);
+                } else if (Array.isArray(res)) {
+                    setEpisodes(res);
                 }
             }).catch(err => console.error('[DetailsModal] failed to load episodes', err));
     }, [apiClient, user, selectedSeasonId, item]);
@@ -797,16 +828,22 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
 
         apiClient.getJSON(apiClient.getUrl(`Items/${item.Id}/Similar?limit=6&userId=${user.Id}`))
             .then((res: any) => {
-                if (res && res.Items) {
+                if (res && Array.isArray(res.Items)) {
                     setSimilarItems(res.Items);
+                } else if (Array.isArray(res)) {
+                    setSimilarItems(res);
                 }
             }).catch(err => console.error('[DetailsModal] failed to load similar items', err));
     }, [apiClient, user, item]);
 
     const handlePlay = (mediaId = item.Id) => {
         if (!apiClient) return;
+        let playId = mediaId;
+        if (item.Type === 'BoxSet' && collectionItems.length > 0) {
+            playId = collectionItems[0].Id;
+        }
         playbackManager.play({
-            ids: [mediaId],
+            ids: [playId],
             serverId: apiClient.serverId()
         });
         onClose();
@@ -890,9 +927,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                         position: 'absolute',
                         bottom: '20px',
                         left: '5%',
-                        zIndex: 2,
+                        zIndex: 15,
                         display: 'flex',
-                        gap: '15px'
+                        gap: '15px',
+                        alignItems: 'center'
                     }}>
                         <button 
                             onClick={() => handlePlay()}
@@ -913,6 +951,116 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                         >
                             <PlayArrowIcon /> Play
                         </button>
+
+                        {user?.Policy?.IsAdministrator && (
+                            <div style={{ position: 'relative' }}>
+                                <button 
+                                    onClick={() => setAdminMenuAnchor(!adminMenuAnchor)}
+                                    style={{
+                                        padding: '8px 16px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: 'bold',
+                                        borderRadius: '6px',
+                                        border: '1px solid rgba(211, 82, 255, 0.4)',
+                                        background: 'rgba(10, 6, 20, 0.75)',
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        height: '38px',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                                    }}
+                                >
+                                    Manage
+                                </button>
+                                {adminMenuAnchor && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: '45px',
+                                        left: 0,
+                                        background: '#0f0a1e',
+                                        border: '1px solid rgba(211, 82, 255, 0.3)',
+                                        borderRadius: '6px',
+                                        padding: '5px 0',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        zIndex: 20,
+                                        minWidth: '130px',
+                                        boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+                                    }}>
+                                        <button 
+                                            onClick={() => {
+                                                setAdminMenuAnchor(false);
+                                                import('../../../components/metadataEditor/metadataEditor').then(({ default: metadataEditor }) => {
+                                                    metadataEditor.show(item.Id, apiClient?.serverId() || '');
+                                                });
+                                            }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#fff',
+                                                padding: '8px 15px',
+                                                textAlign: 'left',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(211, 82, 255, 0.15)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                        >
+                                            Edit Metadata
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                setAdminMenuAnchor(false);
+                                                import('../../../components/imageeditor/imageeditor').then((imageEditor) => {
+                                                    imageEditor.show({
+                                                        itemId: item.Id,
+                                                        serverId: apiClient?.serverId() || ''
+                                                    });
+                                                });
+                                            }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#fff',
+                                                padding: '8px 15px',
+                                                textAlign: 'left',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(211, 82, 255, 0.15)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                        >
+                                            Edit Images
+                                        </button>
+                                        {(item.Type === 'Movie' || item.Type === 'Series') && (
+                                            <button 
+                                                onClick={() => {
+                                                    setAdminMenuAnchor(false);
+                                                    import('../../../components/itemidentifier/itemidentifier').then((itemIdentifier) => {
+                                                        itemIdentifier.show(item.Id, apiClient?.serverId() || '');
+                                                    });
+                                                }}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: '#fff',
+                                                    padding: '8px 15px',
+                                                    textAlign: 'left',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.85rem'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(211, 82, 255, 0.15)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                            >
+                                                Identify
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -1053,6 +1201,66 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         <PlayArrowIcon style={{ color: '#c26df0' }} />
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Movies inside this Collection (for BoxSet items) */}
+                    {item.Type === 'BoxSet' && collectionItems.length > 0 && (
+                        <div style={{ marginTop: '20px' }}>
+                            <h3 style={{
+                                borderBottom: '1px solid rgba(211, 82, 255, 0.2)',
+                                paddingBottom: '12px',
+                                marginBottom: '15px',
+                                fontSize: '1.25rem',
+                                fontWeight: 700
+                            }}>Movies in this Collection</h3>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                                gap: '15px'
+                            }}>
+                                {collectionItems.map((colItem: any) => {
+                                    const colItemPoster = apiClient 
+                                        ? (colItem.BackdropImageTags && colItem.BackdropImageTags.length > 0
+                                            ? apiClient.getUrl(`Items/${colItem.Id}/Images/Backdrop/0?quality=80`)
+                                            : apiClient.getUrl(`Items/${colItem.Id}/Images/Primary?quality=80`))
+                                        : '';
+                                    return (
+                                        <div 
+                                            key={colItem.Id}
+                                            onClick={() => {
+                                                Events.trigger(document, 'open-zaflix-details', [colItem]);
+                                            }}
+                                            style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                        >
+                                            <div style={{
+                                                position: 'relative',
+                                                paddingTop: '56.25%',
+                                                borderRadius: '6px',
+                                                overflow: 'hidden',
+                                                border: '1px solid rgba(211, 82, 255, 0.15)',
+                                                backgroundImage: `url(${colItemPoster})`,
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                                backgroundColor: '#140d27'
+                                            }} />
+                                            <div style={{
+                                                marginTop: '6px',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 'bold',
+                                                textAlign: 'left',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                {colItem.Name}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
