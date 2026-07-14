@@ -11,8 +11,9 @@ let headerTabsContainer;
 let tabsElem;
 
 function ensureElements() {
-    if (!headerTabsContainer) {
-        headerTabsContainer = queryScope.querySelector('.headerTabs');
+    const scope = document.querySelector('.skinHeader');
+    if (scope) {
+        headerTabsContainer = scope.querySelector('.headerTabs');
     }
 }
 

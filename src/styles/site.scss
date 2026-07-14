@@ -362,3 +362,21 @@ a[data-role="button"] {
     color: #0a0614 !important;
     font-weight: bold !important;
 }
+
+/* Replace Jellyfin logo on header with ZAFLIX text logo globally */
+.pageTitleWithDefaultLogo {
+    background-image: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    content: '' !important;
+}
+
+.pageTitleWithDefaultLogo::after {
+    content: 'ZAFLIX' !important;
+    font-size: 1.5rem !important;
+    font-weight: 900 !important;
+    color: #fff !important;
+    text-shadow: 0 0 10px rgba(211, 82, 255, 0.8) !important;
+    font-family: 'Outfit', sans-serif !important;
+    letter-spacing: 2px !important;
+}

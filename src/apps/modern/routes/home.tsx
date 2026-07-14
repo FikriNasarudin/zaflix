@@ -1296,9 +1296,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             }}>
                                 {collectionItems.map((colItem: any) => {
                                     const colItemPoster = apiClient 
-                                        ? (colItem.BackdropImageTags && colItem.BackdropImageTags.length > 0
-                                            ? apiClient.getUrl(`Items/${colItem.Id}/Images/Backdrop/0?quality=80`)
-                                            : apiClient.getUrl(`Items/${colItem.Id}/Images/Primary?quality=80`))
+                                        ? apiClient.getUrl(`Items/${colItem.Id}/Images/Primary?quality=80`)
                                         : '';
                                     return (
                                         <div 
@@ -1312,7 +1310,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         >
                                             <div style={{
                                                 position: 'relative',
-                                                paddingTop: '56.25%',
+                                                paddingTop: '150%', // 2:3 Aspect Ratio
                                                 borderRadius: '6px',
                                                 overflow: 'hidden',
                                                 border: '1px solid rgba(211, 82, 255, 0.15)',
@@ -1690,13 +1688,13 @@ const Home = () => {
                     box-shadow: none !important;
                     border: none !important;
                 }
-                .headerTabButton {
+                .emby-tab-button {
                     font-weight: bold !important;
                     font-size: 0.95rem !important;
                     color: #dcd9fd !important;
                     transition: color 0.2s ease, text-shadow 0.2s ease !important;
                 }
-                .headerTabButton-active {
+                .emby-tab-button-active {
                     color: #c26df0 !important;
                     text-shadow: 0 0 10px rgba(194, 109, 240, 0.6) !important;
                     border-bottom: 2.5px solid #c26df0 !important;

@@ -1,3 +1,103 @@
+#loginPage {
+    background: radial-gradient(circle, rgba(10, 6, 20, 0.45) 0%, rgba(5, 2, 10, 0.98) 100%), #0a0614 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+#loginPage .padded-left.padded-right.padded-bottom-page {
+    width: 100%;
+    max-width: 420px;
+    margin: 40px auto !important;
+    padding: 0 !important;
+}
+
+.manualLoginForm, .visualLoginForm {
+    background: rgba(10, 6, 20, 0.82) !important;
+    border: 1.5px solid rgba(211, 82, 255, 0.15) !important;
+    border-radius: 12px;
+    padding: 40px 30px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(194, 109, 240, 0.12) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Style Inputs */
+.manualLoginForm emby-input, .manualLoginForm input[type="text"], .manualLoginForm input[type="password"] {
+    background: rgba(20, 12, 38, 0.8) !important;
+    border: 1px solid rgba(211, 82, 255, 0.25) !important;
+    border-radius: 6px !important;
+    color: #fff !important;
+    padding: 14px 12px !important;
+    font-size: 1rem !important;
+    margin-top: 5px !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.manualLoginForm emby-input:focus, .manualLoginForm input[type="text"]:focus, .manualLoginForm input[type="password"]:focus {
+    border-color: #00f0ff !important;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3) !important;
+}
+
+/* Submit Button */
+.manualLoginForm .raised.button-submit {
+    background: linear-gradient(135deg, #00f0ff 0%, #d352ff 100%) !important;
+    color: #fff !important;
+    font-weight: bold !important;
+    font-size: 1rem !important;
+    padding: 12px !important;
+    border-radius: 6px !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 15px rgba(211, 82, 255, 0.4) !important;
+    margin-top: 25px !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.manualLoginForm .raised.button-submit:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(211, 82, 255, 0.5) !important;
+}
+
+/* Cancel Button */
+.manualLoginForm .raised.cancel {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #fff !important;
+    border-radius: 6px !important;
+    padding: 10px !important;
+    font-size: 0.9rem !important;
+}
+
+/* Read Only / Lower links button style */
+.readOnlyContent {
+    background: rgba(10, 6, 20, 0.82) !important;
+    border: 1px solid rgba(211, 82, 255, 0.12) !important;
+    border-radius: 12px;
+    padding: 20px 30px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+    max-width: 420px;
+    box-sizing: border-box;
+}
+
+.readOnlyContent button {
+    background: rgba(20, 12, 38, 0.6) !important;
+    border: 1px solid rgba(211, 82, 255, 0.2) !important;
+    border-radius: 6px !important;
+    color: #dcd9fd !important;
+    margin-bottom: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.readOnlyContent button:hover {
+    background: rgba(211, 82, 255, 0.15) !important;
+    color: #fff !important;
+    border-color: rgba(211, 82, 255, 0.4) !important;
+}
+
 .loginDisclaimerContainer {
     display: flex;
     margin-top: 2em;
