@@ -751,6 +751,18 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
     const [episodes, setEpisodes] = useState<any[]>([]);
     const [similarItems, setSimilarItems] = useState<any[]>([]);
+    const [parentCollections, setParentCollections] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!apiClient || !user || !user.Id || item.Type === 'BoxSet') return;
+
+        apiClient.getJSON(apiClient.getUrl(`Users/${user.Id}/Items/${item.Id}/Collections`))
+            .then((res: any) => {
+                if (res && res.Items) {
+                    setParentCollections(res.Items);
+                }
+            }).catch(err => console.error('[DetailsModal] failed to fetch parent collections', err));
+    }, [apiClient, user, item]);
 
     // Fetch seasons if TV show
     useEffect(() => {
@@ -906,41 +918,61 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
 
                 {/* Detail Information */}
                 <div style={{ padding: '25px', color: '#fff', display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
-                    {item.ImageTags && item.ImageTags.Logo ? (
-                        <img 
-                            src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=80`) || ''} 
-                            style={{
-                                maxHeight: isMobile ? '50px' : '75px',
-                                maxWidth: '90%',
-                                objectFit: 'contain',
-                                alignSelf: 'flex-start',
-                                marginBottom: '5px'
-                            }} 
-                            alt={item.Name} 
-                        />
-                    ) : (
-                        <h1 style={{ fontSize: isMobile ? '1.8rem' : '2.2rem', margin: 0, fontWeight: 800 }}>{item.Name}</h1>
-                    )}
-                    
-                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center', fontSize: '0.9rem', color: '#dcd9fd' }}>
-                        {item.ProductionYear && <span>{item.ProductionYear}</span>}
-                        {item.CommunityRating && (
-                            <span style={{ color: '#00f0ff', fontWeight: 'bold' }}>
-                                ★ {item.CommunityRating.toFixed(1)}
-                            </span>
+                    <div style={{ display: 'flex', gap: '25px', flexDirection: isMobile ? 'column' : 'row' }}>
+                        {!isMobile && (
+                            <div style={{
+                                width: '150px',
+                                flexShrink: 0,
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: '1px solid rgba(211, 82, 255, 0.2)',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.6)'
+                            }}>
+                                <img 
+                                    src={apiClient?.getUrl(`Items/${item.Id}/Images/Primary?quality=90`) || ''} 
+                                    style={{ width: '100%', height: 'auto', display: 'block' }} 
+                                    alt={item.Name}
+                                />
+                            </div>
                         )}
-                        {item.Genres && item.Genres.slice(0, 3).map((g: string) => (
-                            <span key={g} style={{
-                                padding: '2px 8px',
-                                background: 'rgba(211, 82, 255, 0.12)',
-                                border: '1px solid rgba(211, 82, 255, 0.25)',
-                                borderRadius: '4px',
-                                fontSize: '0.75rem'
-                            }}>{g}</span>
-                        ))}
-                    </div>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            {item.ImageTags && item.ImageTags.Logo ? (
+                                <img 
+                                    src={apiClient?.getUrl(`Items/${item.Id}/Images/Logo?maxHeight=80`) || ''} 
+                                    style={{
+                                        maxHeight: isMobile ? '50px' : '75px',
+                                        maxWidth: '90%',
+                                        objectFit: 'contain',
+                                        alignSelf: 'flex-start',
+                                        marginBottom: '5px'
+                                    }} 
+                                    alt={item.Name} 
+                                />
+                            ) : (
+                                <h1 style={{ fontSize: isMobile ? '1.8rem' : '2.2rem', margin: 0, fontWeight: 800 }}>{item.Name}</h1>
+                            )}
+                            
+                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', fontSize: '0.9rem', color: '#dcd9fd' }}>
+                                {item.ProductionYear && <span>{item.ProductionYear}</span>}
+                                {item.CommunityRating && (
+                                    <span style={{ color: '#00f0ff', fontWeight: 'bold' }}>
+                                        ★ {item.CommunityRating.toFixed(1)}
+                                    </span>
+                                )}
+                                {item.Genres && item.Genres.slice(0, 3).map((g: string) => (
+                                    <span key={g} style={{
+                                        padding: '2px 8px',
+                                        background: 'rgba(211, 82, 255, 0.12)',
+                                        border: '1px solid rgba(211, 82, 255, 0.25)',
+                                        borderRadius: '4px',
+                                        fontSize: '0.75rem'
+                                    }}>{g}</span>
+                                ))}
+                            </div>
 
-                    <p style={{ fontSize: '1rem', lineHeight: '1.5', color: '#dcd9fd', margin: 0 }}>{item.Overview}</p>
+                            <p style={{ fontSize: '1rem', lineHeight: '1.5', color: '#dcd9fd', margin: 0 }}>{item.Overview}</p>
+                        </div>
+                    </div>
 
                     {/* TV Show Episodes Section */}
                     {item.Type === 'Series' && (
@@ -1025,6 +1057,62 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                     )}
 
                     {/* More Like This (Similar Recommendations) */}
+                    {/* Belongs to Collection Section */}
+                    {parentCollections.length > 0 && (
+                        <div style={{ marginTop: '20px', marginBottom: '10px' }}>
+                            <h3 style={{
+                                borderBottom: '1px solid rgba(211, 82, 255, 0.2)',
+                                paddingBottom: '12px',
+                                marginBottom: '15px',
+                                fontSize: '1.25rem',
+                                fontWeight: 700
+                            }}>Part of Collection</h3>
+                            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                                {parentCollections.map((col: any) => {
+                                    const colUrl = apiClient?.getUrl(`Items/${col.Id}/Images/Primary?quality=90`) || '';
+                                    return (
+                                        <div 
+                                            key={col.Id}
+                                            onClick={() => {
+                                                Events.trigger(document, 'open-zaflix-details', [col]);
+                                            }}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '12px',
+                                                background: 'rgba(211, 82, 255, 0.08)',
+                                                border: '1px solid rgba(211, 82, 255, 0.25)',
+                                                borderRadius: '8px',
+                                                padding: '8px 16px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = 'rgba(211, 82, 255, 0.15)';
+                                                e.currentTarget.style.borderColor = 'rgba(211, 82, 255, 0.4)';
+                                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = 'rgba(211, 82, 255, 0.08)';
+                                                e.currentTarget.style.borderColor = 'rgba(211, 82, 255, 0.25)';
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                            }}
+                                        >
+                                            {colUrl && (
+                                                <img 
+                                                    src={colUrl} 
+                                                    style={{ width: '40px', height: '60px', borderRadius: '4px', objectFit: 'cover' }} 
+                                                    alt={col.Name} 
+                                                />
+                                            )}
+                                            <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#fff' }}>{col.Name}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {similarItems.length > 0 && (
                         <div style={{ marginTop: '25px' }}>
                             <h3 style={{
@@ -1094,6 +1182,23 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
    Home Main Layout View
    ========================================================================== */
 const Home = () => {
+    const { __legacyApiClient__: apiClient, user } = useApi();
+    const [movieLibraryId, setMovieLibraryId] = useState<string | null>(null);
+    const [showLibraryId, setShowLibraryId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!apiClient || !user || !user.Id) return;
+        apiClient.getJSON(apiClient.getUrl('UserViews?userId=' + user.Id))
+            .then((res: any) => {
+                if (res && res.Items) {
+                    const movies = res.Items.find((i: any) => i.CollectionType === 'movies');
+                    const tvshows = res.Items.find((i: any) => i.CollectionType === 'tvshows');
+                    if (movies) setMovieLibraryId(movies.Id);
+                    if (tvshows) setShowLibraryId(tvshows.Id);
+                }
+            }).catch(err => console.error('[Home] failed to load user views', err));
+    }, [apiClient, user]);
+
     const [ searchParams ] = useSearchParams();
     const initialTabIndex = parseInt(searchParams.get('tab') ?? '0', 10);
     const [categoryFilter, setCategoryFilter] = useState<'home' | 'movies' | 'shows' | 'mylist' | 'collections' | 'anime'>('home');
@@ -1346,6 +1451,39 @@ const Home = () => {
                                 <MediaRow title="Movie Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
                                 <MediaRow title="Recently Added Movies" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
                                 <MediaRow title="All Movies" query={{ SortBy: 'SortName', SortOrder: 'Ascending', Limit: 24, IncludeItemTypes: 'Movie', Recursive: true }} />
+                                {movieLibraryId && (
+                                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
+                                        <button 
+                                            onClick={() => Dashboard.navigate(`movies?topParentId=${movieLibraryId}&collectionType=movies`)}
+                                            style={{
+                                                padding: '12px 35px',
+                                                fontSize: '1rem',
+                                                fontWeight: 'bold',
+                                                color: '#fff',
+                                                background: 'linear-gradient(135deg, rgba(211, 82, 255, 0.2) 0%, rgba(0, 240, 255, 0.2) 100%)',
+                                                border: '1.5px solid rgba(211, 82, 255, 0.4)',
+                                                borderRadius: '30px',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 15px rgba(0,0,0,0.4), 0 0 15px rgba(211, 82, 255, 0.1)',
+                                                transition: 'all 0.3s ease',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '1px'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.transform = 'scale(1.05)';
+                                                e.currentTarget.style.borderColor = '#00f0ff';
+                                                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 240, 255, 0.3)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = 'scale(1)';
+                                                e.currentTarget.style.borderColor = 'rgba(211, 82, 255, 0.4)';
+                                                e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.4), 0 0 15px rgba(211, 82, 255, 0.1)';
+                                            }}
+                                        >
+                                            See All Movies
+                                        </button>
+                                    </div>
+                                )}
                             </>
                         )}
 
@@ -1358,6 +1496,39 @@ const Home = () => {
                                 <MediaRow title="Suggested TV Shows" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
                                 <MediaRow title="Recently Added TV Shows" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
                                 <MediaRow title="All TV Shows" query={{ SortBy: 'SortName', SortOrder: 'Ascending', Limit: 24, IncludeItemTypes: 'Series', Recursive: true }} />
+                                {showLibraryId && (
+                                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
+                                        <button 
+                                            onClick={() => Dashboard.navigate(`tv?topParentId=${showLibraryId}&collectionType=tvshows`)}
+                                            style={{
+                                                padding: '12px 35px',
+                                                fontSize: '1rem',
+                                                fontWeight: 'bold',
+                                                color: '#fff',
+                                                background: 'linear-gradient(135deg, rgba(211, 82, 255, 0.2) 0%, rgba(0, 240, 255, 0.2) 100%)',
+                                                border: '1.5px solid rgba(211, 82, 255, 0.4)',
+                                                borderRadius: '30px',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 15px rgba(0,0,0,0.4), 0 0 15px rgba(211, 82, 255, 0.1)',
+                                                transition: 'all 0.3s ease',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '1px'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.transform = 'scale(1.05)';
+                                                e.currentTarget.style.borderColor = '#00f0ff';
+                                                e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 240, 255, 0.3)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = 'scale(1)';
+                                                e.currentTarget.style.borderColor = 'rgba(211, 82, 255, 0.4)';
+                                                e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.4), 0 0 15px rgba(211, 82, 255, 0.1)';
+                                            }}
+                                        >
+                                            See All TV Shows
+                                        </button>
+                                    </div>
+                                )}
                             </>
                         )}
 
