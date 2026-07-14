@@ -12,7 +12,6 @@ import Typography from '@mui/material/Typography';
 
 import EndScreen from '../../components/VideoPlayer/EndScreen';
 import { ZAFlix } from '../../styles/theme';
-import 'components/playback/playbackorientation';
 
 const SHORTCUT_HINTS = [
     { key: 'Space', label: 'Play/Pause' },
@@ -50,6 +49,11 @@ const VideoPage: FC = () => {
             Events.on(doc, EventType.SHOW_VIDEO_OSD, onShowVideoOsd);
             Events.on(doc, EventType.VIDEO_TITLE_CHANGE, onTitleChange);
         }
+
+        // Lazy-load playbackorientation to break circular dependency:
+        // playbackmanager.js side-effect imports eventually require playbackorientation.js
+        // at module-evaluation time, before the PlaybackManager singleton is created.
+        import('components/playback/playbackorientation');
 
         return () => {
             if (doc) {
