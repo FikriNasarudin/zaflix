@@ -46,7 +46,7 @@ export const useUsersDetails = () => {
     const usersById: UsersRecords = {};
     const names: string[] = [];
 
-    if (users) {
+    if (Array.isArray(users)) {
         users.forEach(user => {
             const userId = user.Id;
             if (userId) usersById[userId] = user;

@@ -53,7 +53,7 @@ const SyncPlayGroupListItem: FC<SyncPlayGroupListItemProps> = ({
                     }}
                 >
                     {currentGroup?.Participants?.map(participantName => {
-                        const participant = users?.find(u => u.Name === participantName);
+                        const participant = Array.isArray(users) ? users.find(u => u.Name === participantName) : null;
                         return participant ? (
                             <UserAvatar
                                 key={participant.Id}
