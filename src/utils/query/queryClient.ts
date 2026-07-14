@@ -27,10 +27,11 @@ const queryCache = new QueryCache({
         const status = requestError?.response?.status || requestError?.status || requestError?.statusCode;
         if (status === HTTP_UNAUTHORIZED) {
             try {
-                // Clear all query caches to prevent infinite spinner loops on token expiry
-                queryClient.clear();
-                // Notify the app that the session has expired so it can redirect to login
-                document.dispatchEvent(new CustomEvent('session-expired'));
+                // Cancel and nullify the failing query to prevent infinite spinner loops on token expiry.
+                // The session-expired event is dispatched by the ping interval in useApi.tsx instead,
+                // because calling queryClient.clear() from within onError can cause cascading re-renders.
+                void queryClient.cancelQueries({ queryKey });
+                queryClient.setQueryData(queryKey, null);
             } catch (e) {
                 console.warn('[QueryCache] failed to handle unauthorized', e);
             }

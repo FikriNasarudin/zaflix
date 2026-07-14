@@ -31,7 +31,7 @@ export const ApiProvider: FC<PropsWithChildren<unknown>> = ({ children }) => {
     const updateApiUser = useCallback((_e: Event | undefined, newUser: UserDto) => {
         setUser(newUser);
 
-        if (newUser.ServerId) {
+        if (newUser?.ServerId) {
             setLegacyApiClient(ServerConnections.getApiClient(newUser.ServerId));
         }
     }, []);
