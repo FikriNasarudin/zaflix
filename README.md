@@ -1,117 +1,97 @@
-# Zaflix (Customized Jellyfin Web Client)
+# Zaflix
 
-This repository is a customized version of the official **[Jellyfin Web Client](https://github.com/jellyfin/jellyfin-web)**, styled with the sleek, dark, glassmorphic **Zaflix** theme.
-
----
-
-## 📂 Workspace Layout
-
-- **Root Directory (`/`)**: Holds the customized `jellyfin-web` codebase.
-- **[`/react`](./react)**: Holds the original standalone custom React + Vite client.
+A **Netflix-inspired** custom [Jellyfin Web](https://github.com/jellyfin/jellyfin-web) client with a dark purple-neon glassmorphic theme.
 
 ---
 
-## 🎨 Theme Customization Details (Zaflix Style)
+## What is Zaflix?
 
-The official Jellyfin Web client styling has been customized with the following design tokens:
-* **Background Color**: `#0a0614` (Deep velvet violet)
-* **Card & Panel Backgrounds**: `#140d27` (Dark amethyst)
-* **Accent & Primary Colors**: `#c26df0` (Neon purple/magenta) with `#d991ff` hover/glow highlights
-* **Divider & Action Borders**: `rgba(211, 82, 255, 0.2)`
-* **Typography**: Integrated Google Fonts (`Outfit` for headings and brand elements, `Inter` for standard UI copy)
-* **Aesthetics**: Glassmorphism on headers, neon outline inputs, smooth cubic scaling cards on hover, and glowing linear gradients on primary buttons.
+Zaflix transforms the default Jellyfin experience into a visually rich, Netflix-like interface while keeping your existing Jellyfin media server as the backend. It features:
 
----
-
-## 🛠️ Local Development (Frontend Only)
-
-To run the custom UI locally and connect it to your existing backend server:
-
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-2. **Start the development server**:
-   ```bash
-   npm start
-   ```
-   *This starts the Webpack dev server, which will compile your custom styling and host the site (usually on `http://localhost:8080`).*
-
-3. **Connect to your server**:
-   - Open your browser to the URL displayed in the terminal (e.g., `http://localhost:8080`).
-   - Enter the IP address/domain and credentials of your backend Jellyfin server to log in and test your customized interface.
+- **Hero Billboard** — Auto-rotating hero section with backdrop, logo overlays, video clips, and dot navigation
+- **Smooth Carousels** — Drag-to-scroll rows with momentum for movies, TV shows, and collections
+- **Detail Modals** — Rich overlay with cast, episodes (per-season), similar items, and collection info
+- **Video Player Overlay** — Post-play "Up Next" screen with circular countdown, keyboard shortcut hints, and glassmorphic on-screen controls
+- **Full-Text Search** — Debounced grouped results with lazy-loaded image cards
+- **Clean Lightweight Theme** — Dark glassmorphic UI with purple neon accents, smooth transitions, and loading skeletons
+- **Mobile-First** — Bottom navigation bar, touch swipe gestures, responsive layouts, and auto-rotate to landscape on playback
+- **Continue Watching** — Resume from where you left off with episode thumbnails
 
 ---
 
-## 🚀 CI/CD Automated Deployment (Recommended)
+## Based On
 
-A GitHub Actions workflow is configured in [deploy.yml](.github/workflows/deploy.yml) to automatically compile and deploy your code. The local `dist` folder remains in `.gitignore` on your development branch (`staging`).
-
-### How it works:
-1. When you push your code modifications to the **`staging`** branch, the GitHub Action automatically runs, installs Node 24, compiles your UI via `npm run build:production`, and pushes the compiled files directly into a clean **`release`** branch.
-2. The `release` branch contains the ready-to-serve web assets at its root.
-
-### Setup on your Server:
-
-To deploy the compiled files on your server:
-
-1. **Clone and checkout the `release` branch**:
-   ```bash
-   # Go to your media-server directory
-   cd /shares/usb-storage/media-server/jellyfin
-   
-   # Clone (or go into the existing folder)
-   cd zaflix
-   
-   # Checkout the release branch (only contains compiled static assets)
-   git fetch origin
-   git checkout release
-   ```
-
-2. **To update the UI in the future**:
-   Simply run this on your server when you push changes to staging (wait a minute for the CI/CD to finish building):
-   ```bash
-   git pull
-   ```
+This project is a customized fork of the **[Jellyfin Web Client](https://github.com/jellyfin/jellyfin-web)**, the official frontend for [Jellyfin](https://jellyfin.org) media server. All custom components (Billboard, MediaRow, DetailsModal, EndScreen, search, bottom nav) are built with **React** on top of the existing Jellyfin infrastructure.
 
 ---
 
-## 🐳 Running on Docker Jellyfin Server
+## Prerequisites
 
-Update your Docker volume configurations on the server to point to the root of the **`release`** branch repository path (since the compiled assets are directly in the root of the branch, not inside a `dist/` subfolder):
+- A running **Jellyfin server** (version 10.8+)
+- **Docker** (for container deployment) **or** **Node.js 20+** and **npm** (for manual development)
+- **Git** (to clone the repository)
 
-### Docker Compose
+---
+
+## Quick Start
+
+### Option 1: Docker (mount as Jellyfin web root)
+
+```bash
+git clone https://github.com/FikriNasarudin/zaflix.git
+cd zaflix
+git checkout release
+```
+
+Then mount the directory into your Jellyfin container:
+
 ```yaml
 services:
   jellyfin:
     image: jellyfin/jellyfin
-    # ... your existing configs ...
     volumes:
-      - /shares/usb-storage/media-server/jellyfin/zaflix:/jellyfin/jellyfin-web:ro
+      - /path/to/zaflix:/jellyfin/jellyfin-web:ro
 ```
 
-### Docker Run CLI
-```bash
-docker run -d \
-  --name jellyfin \
-  -v /shares/usb-storage/media-server/jellyfin/zaflix:/jellyfin/jellyfin-web:ro \
-  # ... your other mounts ...
-  jellyfin/jellyfin
-```
+### Option 2: Build from source
 
----
-
-## ⚙️ Original Standalone React Client (Vite)
-If you want to run the standalone React client:
 ```bash
-cd react
+git clone https://github.com/FikriNasarudin/zaflix.git
+cd zaflix
+git checkout staging
 npm install
-npm run dev
+npm run build:production
 ```
-Check out the **[React Client README](./react/README.md)** for details on homelab and Docker compose deployment.
+
+Copy the `dist/` folder to your web server or mount it into your Jellyfin container.
+
+### Option 3: Development server
+
+```bash
+git clone https://github.com/FikriNasarudin/zaflix.git
+cd zaflix
+npm install
+npm start
+```
+
+Open `http://localhost:8080` and connect to your Jellyfin server.
 
 ---
 
-## ⚖️ License
-This project inherits the original **GNU General Public License v2.0** of the Jellyfin Web project.
+## Project Structure
+
+| Path | Description |
+|------|-------------|
+| `src/apps/modern/` | React-based modern app (Zaflix components) |
+| `src/apps/modern/components/` | Billboard, MediaRow, DetailsModal, EndScreen, BottomNav |
+| `src/apps/modern/hooks/` | React Query hooks for data fetching |
+| `src/apps/modern/styles/` | CSS overrides and theme constants |
+| `src/apps/modern/routes/` | Page components (home, search, video, movies, shows) |
+| `src/apps/legacy/` | Original Jellyfin Web UI (unchanged) |
+| `src/components/` | Shared components used by both modern and legacy apps |
+
+---
+
+## License
+
+This project inherits the **GNU General Public License v2.0** from the Jellyfin Web project.
