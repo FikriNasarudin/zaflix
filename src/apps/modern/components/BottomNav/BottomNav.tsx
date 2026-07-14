@@ -1,3 +1,8 @@
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import HomeIcon from '@mui/icons-material/Home';
+import MovieIcon from '@mui/icons-material/Movie';
+import SearchIcon from '@mui/icons-material/Search';
+import TvIcon from '@mui/icons-material/Tv';
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -6,7 +11,7 @@ import { ZAFlix } from '../../styles/theme';
 
 interface NavItem {
     label: string;
-    icon: string;
+    icon: React.ReactNode;
     path: string;
     matchFn: (pathname: string) => boolean;
 }
@@ -14,31 +19,31 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
     {
         label: 'Home',
-        icon: '⌂',
+        icon: <HomeIcon />,
         path: '/home',
         matchFn: (p) => p === '/home' || (p === '/home' && !p.includes('tab='))
     },
     {
         label: 'Movies',
-        icon: '🎬',
+        icon: <MovieIcon />,
         path: '/movies',
         matchFn: (p) => p.startsWith('/movies') || p.startsWith('/list') && p.includes('collectionType=movies')
     },
     {
         label: 'TV Shows',
-        icon: '📺',
+        icon: <TvIcon />,
         path: '/tv',
         matchFn: (p) => p.startsWith('/tv') || p.startsWith('/list') && p.includes('collectionType=tvshows')
     },
     {
         label: 'My List',
-        icon: '♡',
+        icon: <FavoriteBorderIcon />,
         path: '/home?tab=1',
         matchFn: (p) => p.includes('tab=1')
     },
     {
         label: 'Search',
-        icon: '⌕',
+        icon: <SearchIcon />,
         path: '/search',
         matchFn: (p) => p.startsWith('/search')
     }
@@ -96,7 +101,8 @@ const BottomNav: React.FC = () => {
                         <span style={{
                             fontSize: '22px',
                             lineHeight: 1,
-                            filter: isActive ? 'drop-shadow(0 0 6px rgba(194, 109, 240, 0.5))' : 'none'
+                            filter: isActive ? 'drop-shadow(0 0 6px rgba(194, 109, 240, 0.5))' : 'none',
+                            display: 'flex'
                         }}>
                             {item.icon}
                         </span>

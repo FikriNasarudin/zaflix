@@ -6,6 +6,7 @@ import { toAsyncPageRoute } from 'components/router/AsyncRoute';
 import { toViewManagerPageRoute } from 'components/router/LegacyRoute';
 import ErrorBoundary from 'components/router/ErrorBoundary';
 import FallbackRoute from 'components/router/FallbackRoute';
+import ReactErrorBoundary from '../components/ErrorBoundary';
 
 import { ASYNC_PUBLIC_ROUTES, ASYNC_USER_ROUTES } from './asyncRoutes';
 import { LEGACY_PUBLIC_ROUTES, LEGACY_USER_ROUTES } from './legacyRoutes';
@@ -20,7 +21,11 @@ export const APP_ROUTES: RouteObject[] = [
 
             {
                 /* User routes */
-                Component: ConnectionRequired,
+                element: (
+                    <ReactErrorBoundary>
+                        <ConnectionRequired />
+                    </ReactErrorBoundary>
+                ),
                 children: [
                     ...ASYNC_USER_ROUTES.map(toAsyncPageRoute),
                     ...LEGACY_USER_ROUTES.map(toViewManagerPageRoute),

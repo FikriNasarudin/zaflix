@@ -1,11 +1,10 @@
-import { ItemFields } from '@jellyfin/sdk/lib/generated-client';
-import { getLibraryApi } from '@jellyfin/sdk/lib/utils/api/library-api';
 import React, { useEffect, useState } from 'react';
 
 import { useApi } from 'hooks/useApi';
 import { useToggleFavoriteMutation } from 'hooks/useFetchItems';
 import { playbackManager } from 'components/playback/playbackmanager';
 import Events from 'utils/events';
+import datetime from 'scripts/datetime';
 
 import CloseIcon from '@mui/icons-material/Close';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -13,10 +12,11 @@ import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useCollectionItems } from '../../hooks/useCollectionItems';
 import { useEpisodes } from '../../hooks/useEpisodes';
+import { useItem } from '../../hooks/useItem';
 import { useItemCollections } from '../../hooks/useItemCollections';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useSeasons } from '../../hooks/useSeasons';
 import { useSimilarItems } from '../../hooks/useSimilarItems';
 import { ZAFlix } from '../../styles/theme';
@@ -36,6 +36,8 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const { data: seasons = [], isPending: isSeasonsPending } = useSeasons(isSeries ? item.Id : undefined);
     const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
     const { data: episodes = [], isPending: isEpisodesPending } = useEpisodes(isSeries ? item.Id : undefined, selectedSeasonId);
+    const { data: fullItem } = useItem(item.Id);
+    const detailItem = fullItem || item;
     const { data: similarItems = [], isPending: isSimilarPending } = useSimilarItems(item.Id);
     const { data: parentCollections = [], isPending: isCollectionsPending } = useItemCollections(isBoxSet ? undefined : item.Id);
     const parentCollectionId = isBoxSet ? item.Id : (parentCollections[0]?.Id || undefined);
@@ -150,6 +152,13 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                         backgroundImage: `url(${backdropUrl})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center 20%'
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        background: isMobile
+                            ? 'linear-gradient(to right, rgba(10,6,20,0.7) 0%, rgba(10,6,20,0.2) 60%, transparent 100%)'
+                            : 'linear-gradient(to right, rgba(10,6,20,0.85) 0%, rgba(10,6,20,0.3) 50%, transparent 100%)'
                     }} />
                     <div style={{
                         position: 'absolute',
@@ -367,14 +376,35 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 <h1 style={{ fontSize: isMobile ? '1.8rem' : '2.2rem', margin: 0, fontWeight: 800 }}>{item.Name}</h1>
                             )}
 
-                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', fontSize: '0.9rem', color: ZAFlix.colors.textSecondary }}>
-                                {item.ProductionYear && <span>{item.ProductionYear}</span>}
-                                {item.CommunityRating && (
-                                    <span style={{ color: ZAFlix.colors.cyan, fontWeight: 'bold' }}>
-                                        ★ {item.CommunityRating.toFixed(1)}
+                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', fontSize: '0.9rem', color: ZAFlix.colors.textSecondary, flexWrap: 'wrap' }}>
+                                {detailItem.ProductionYear && <span>{detailItem.ProductionYear}</span>}
+                                {detailItem.RunTimeTicks && (
+                                    <span style={{ color: ZAFlix.colors.textSecondary }}>
+                                        {datetime.getDisplayRunningTime(detailItem.RunTimeTicks)}
                                     </span>
                                 )}
-                                {item.Genres && item.Genres.slice(0, 3).map((g: string) => (
+                                {detailItem.OfficialRating && (
+                                    <span style={{
+                                        padding: '2px 8px',
+                                        background: 'rgba(211, 82, 255, 0.15)',
+                                        border: `1px solid ${ZAFlix.colors.border}`,
+                                        borderRadius: '4px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        color: ZAFlix.colors.accentLight
+                                    }}>
+                                        {detailItem.OfficialRating}
+                                    </span>
+                                )}
+                                {detailItem.CommunityRating && (
+                                    <span style={{ color: ZAFlix.colors.cyan, fontWeight: 'bold' }}>
+                                        ★ {detailItem.CommunityRating.toFixed(1)}
+                                    </span>
+                                )}
+                                {detailItem.Studios?.[0]?.Name && (
+                                    <span>{detailItem.Studios[0].Name}</span>
+                                )}
+                                {detailItem.Genres && detailItem.Genres.slice(0, 3).map((g: string) => (
                                     <span key={g} style={{
                                         padding: '2px 8px',
                                         background: 'rgba(211, 82, 255, 0.12)',
@@ -384,6 +414,17 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                     }}>{g}</span>
                                 ))}
                             </div>
+                            {detailItem.People?.filter((p: any) => p.Type === 'Director').slice(0, 2).length > 0 && (
+                                <div style={{ fontSize: '0.85rem', color: ZAFlix.colors.textSecondary }}>
+                                    <span style={{ color: ZAFlix.colors.textSecondary, opacity: 0.7 }}>Directed by </span>
+                                    {detailItem.People.filter((p: any) => p.Type === 'Director').slice(0, 2).map((p: any, i: number, arr: any[]) => (
+                                        <span key={p.Name}>
+                                            <span style={{ color: ZAFlix.colors.textPrimary }}>{p.Name}</span>
+                                            {i < arr.length - 1 && <span>, </span>}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
 
                             <p style={{ fontSize: '1rem', lineHeight: '1.5', color: ZAFlix.colors.textSecondary, margin: 0 }}>{item.Overview}</p>
                         </div>

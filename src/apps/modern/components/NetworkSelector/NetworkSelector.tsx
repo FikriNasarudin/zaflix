@@ -1,42 +1,21 @@
 import React from 'react';
 
-import { useApi } from 'hooks/useApi';
-import Dashboard from 'utils/dashboard';
-
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { ZAFlix } from '../../styles/theme';
 
-const NETWORKS = [
-    { name: 'Netflix' },
-    { name: 'Disney+' },
-    { name: 'Hulu' },
-    { name: 'HBO' },
-    { name: 'Prime Video' },
-    { name: 'Apple TV+' }
+const GENRES = [
+    'All', 'Action', 'Comedy', 'Drama', 'Thriller',
+    'Science Fiction', 'Horror', 'Anime', 'Documentary',
+    'Romance', 'Adventure', 'Fantasy'
 ];
 
-const NetworkSelector = () => {
-    const { __legacyApiClient__: apiClient } = useApi();
+interface GenreSelectorProps {
+    selectedGenre: string | null;
+    onGenreChange: (genre: string | null) => void;
+}
+
+const GenreSelector: React.FC<GenreSelectorProps> = ({ selectedGenre, onGenreChange }) => {
     const { isMobile } = useMediaQuery();
-
-    const handleNetworkClick = (networkName: string) => {
-        if (!apiClient) return;
-
-        apiClient.getItems(apiClient.getCurrentUserId(), {
-            IncludeItemTypes: 'Studio',
-            SearchTerm: networkName,
-            Recursive: true
-        }).then((result: any) => {
-            if (result && result.Items && result.Items.length > 0) {
-                const studio = result.Items[0];
-                Dashboard.navigate(`details?id=${studio.Id}&serverId=${apiClient.serverId()}`);
-            } else {
-                Dashboard.navigate(`search?query=${encodeURIComponent(networkName)}`);
-            }
-        }).catch(() => {
-            Dashboard.navigate(`search?query=${encodeURIComponent(networkName)}`);
-        });
-    };
 
     return (
         <div
@@ -51,39 +30,46 @@ const NetworkSelector = () => {
                 textAlign: 'left'
             }}
         >
-            {NETWORKS.map((net) => (
-                <button
-                    key={net.name}
-                    onClick={() => handleNetworkClick(net.name)}
-                    style={{
-                        flex: '0 0 auto',
-                        padding: isMobile ? '6px 14px' : '8px 18px',
-                        fontSize: isMobile ? '0.8rem' : '0.9rem',
-                        fontWeight: 'bold',
-                        color: ZAFlix.colors.textPrimary,
-                        background: ZAFlix.colors.card,
-                        border: `1.5px solid ${ZAFlix.colors.border}`,
-                        borderRadius: ZAFlix.radii.chip,
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                        transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = ZAFlix.colors.accent;
-                        e.currentTarget.style.boxShadow = ZAFlix.shadows.glow;
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = ZAFlix.colors.border;
-                        e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                >
-                    {net.name}
-                </button>
-            ))}
+            {GENRES.map((genre) => {
+                const isActive = genre === 'All' ? selectedGenre === null : selectedGenre === genre;
+                return (
+                    <button
+                        key={genre}
+                        onClick={() => onGenreChange(genre === 'All' ? null : genre)}
+                        style={{
+                            flex: '0 0 auto',
+                            padding: isMobile ? '6px 14px' : '8px 18px',
+                            fontSize: isMobile ? '0.8rem' : '0.9rem',
+                            fontWeight: 'bold',
+                            color: isActive ? ZAFlix.colors.accent : ZAFlix.colors.textPrimary,
+                            background: isActive ? 'rgba(194, 109, 240, 0.15)' : ZAFlix.colors.card,
+                            border: `1.5px solid ${isActive ? ZAFlix.colors.accent : ZAFlix.colors.border}`,
+                            borderRadius: ZAFlix.radii.chip,
+                            cursor: 'pointer',
+                            boxShadow: isActive ? ZAFlix.shadows.glow : '0 4px 10px rgba(0,0,0,0.3)',
+                            transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                            if (!isActive) {
+                                e.currentTarget.style.borderColor = ZAFlix.colors.accent;
+                                e.currentTarget.style.boxShadow = ZAFlix.shadows.glow;
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isActive) {
+                                e.currentTarget.style.borderColor = ZAFlix.colors.border;
+                                e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }
+                        }}
+                    >
+                        {genre}
+                    </button>
+                );
+            })}
         </div>
     );
 };
 
-export default NetworkSelector;
+export default GenreSelector;

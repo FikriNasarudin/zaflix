@@ -1,6 +1,8 @@
 import type { Api } from '@jellyfin/sdk';
 import type { UserDto } from '@jellyfin/sdk/lib/generated-client';
 import type { ApiClient, Event } from 'jellyfin-apiclient';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 import React, { type FC, type PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -21,6 +23,7 @@ export const ApiProvider: FC<PropsWithChildren<unknown>> = ({ children }) => {
     const [ legacyApiClient, setLegacyApiClient ] = useState<ApiClient>();
     const [ api, setApi ] = useState<Api>();
     const [ user, setUser ] = useState<UserDto>();
+    const [ snackbarOpen, setSnackbarOpen ] = useState(false);
     const sessionPingRef = useRef<ReturnType<typeof setInterval>>();
 
     const resetApiUser = useCallback(() => {
@@ -53,7 +56,13 @@ export const ApiProvider: FC<PropsWithChildren<unknown>> = ({ children }) => {
         events.on(ServerConnections, 'localusersignedin', updateApiUser);
         events.on(ServerConnections, 'localusersignedout', resetApiUser);
 
-        const onSessionExpired = () => resetApiUser();
+        const onSessionExpired = () => {
+            setSnackbarOpen(true);
+            setTimeout(() => {
+                setSnackbarOpen(false);
+                resetApiUser();
+            }, 3000);
+        };
         document.addEventListener('session-expired', onSessionExpired);
 
         return () => {
@@ -94,6 +103,27 @@ export const ApiProvider: FC<PropsWithChildren<unknown>> = ({ children }) => {
     return (
         <ApiContext.Provider value={context}>
             {children}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    severity='warning'
+                    variant='filled'
+                    sx={{
+                        width: '100%',
+                        backgroundColor: '#1a1035',
+                        color: '#dcd9fd',
+                        border: '1px solid rgba(211, 82, 255, 0.3)',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                        fontWeight: 500
+                    }}
+                >
+                    Session expired — please log in again
+                </Alert>
+            </Snackbar>
         </ApiContext.Provider>
     );
 };

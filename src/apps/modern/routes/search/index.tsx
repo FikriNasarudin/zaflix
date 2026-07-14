@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { useApi } from 'hooks/useApi';
 
+import DetailsModal from '../../components/DetailsModal/DetailsModal';
+import { useItem } from '../../hooks/useItem';
 import { useSearch } from '../../hooks/useSearch';
 import { ZAFlix } from '../../styles/theme';
 import '../../styles/modern.styles.css';
@@ -142,6 +144,8 @@ const SearchPage: FC = () => {
     const { __legacyApiClient__: apiClient } = useApi();
     const [query, setQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [selectedSearchItemId, setSelectedSearchItemId] = useState<string | null>(null);
+    const { data: selectedFullItem } = useItem(selectedSearchItemId || undefined);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const { data: results, isLoading } = useSearch(debouncedQuery);
@@ -172,7 +176,7 @@ const SearchPage: FC = () => {
     };
 
     const handleSelect = (hint: SearchHint) => {
-        navigate(`/details?id=${hint.Id}`);
+        setSelectedSearchItemId(hint.Id || null);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -367,6 +371,12 @@ const SearchPage: FC = () => {
                     </div>
                 )}
             </div>
+            {selectedFullItem && (
+                <DetailsModal
+                    item={selectedFullItem}
+                    onClose={() => setSelectedSearchItemId(null)}
+                />
+            )}
         </div>
     );
 };

@@ -2,7 +2,7 @@ import { ImageType } from '@jellyfin/sdk/lib/generated-client/models/image-type'
 import { ItemSortBy } from '@jellyfin/sdk/lib/generated-client/models/item-sort-by';
 import Box from '@mui/material/Box';
 import classNames from 'classnames';
-import React, { type FC, SetStateAction, useCallback, useMemo } from 'react';
+import React, { type FC, SetStateAction, useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useLibrary } from 'apps/modern/features/libraries/hooks/useLibrary';
 import { getDefaultLibraryViewSettings } from 'apps/modern/features/libraries/utils/settings';
@@ -144,28 +144,57 @@ const ItemsView: FC = () => {
         viewType
     ]);
 
+    const items = itemsResult?.data?.Items ?? [];
+    const totalRecordCount = itemsResult?.data?.TotalRecordCount ?? 0;
+    const startIndex = libraryViewSettings.StartIndex ?? 0;
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    // Infinite scroll sentinel — auto-load next page when sentinel is visible
+    useEffect(() => {
+        const sentinel = loadMoreRef.current;
+        if (!sentinel) return;
+        if (!totalRecordCount || items.length >= totalRecordCount) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    const nextIndex = startIndex + items.length;
+                    if (nextIndex < totalRecordCount) {
+                        setLibraryViewSettings((prev: LibraryViewSettings) => ({
+                            ...prev,
+                            StartIndex: nextIndex
+                        }));
+                    }
+                }
+            },
+            { rootMargin: '400px' }
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [items.length, totalRecordCount, startIndex, setLibraryViewSettings]);
+
     const getItems = useCallback(() => {
-        if (!itemsResult?.data?.Items?.length) {
+        if (!items.length) {
             return <NoItemsMessage message={noItemsMessage ?? 'MessageNoItemsAvailable'} />;
         }
 
         if (libraryViewSettings.ViewMode === ViewMode.ListView) {
             return (
                 <Lists
-                    items={itemsResult?.data?.Items ?? []}
+                    items={items}
                     listOptions={getListOptions()}
                 />
             );
         }
         return (
             <Cards
-                items={itemsResult?.data?.Items ?? []}
+                items={items}
                 cardOptions={getCardOptions()}
             />
         );
     }, [
         libraryViewSettings.ViewMode,
-        itemsResult?.data?.Items,
+        items,
         getListOptions,
         getCardOptions,
         noItemsMessage
@@ -199,6 +228,7 @@ const ItemsView: FC = () => {
                     queryKey={allItemsQueryKey}
                 >
                     {getItems()}
+                    <div ref={loadMoreRef} style={{ height: 1, width: '100%' }} />
                 </ItemsContainer>
             )}
         </Box>

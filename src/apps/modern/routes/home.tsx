@@ -15,8 +15,8 @@ import { useUserViews } from 'hooks/api/useUserViews';
 
 import Billboard from '../components/Billboard/Billboard';
 import DetailsModal from '../components/DetailsModal/DetailsModal';
+import GenreSelector from '../components/NetworkSelector/NetworkSelector';
 import MediaRow from '../components/MediaRow/MediaRow';
-import NetworkSelector from '../components/NetworkSelector/NetworkSelector';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useResumeItems } from '../hooks/useResumeItems';
 import { ZAFlix } from '../styles/theme';
@@ -54,6 +54,7 @@ const Home = () => {
     const [ searchParams, setSearchParams ] = useSearchParams();
     const initialTabIndex = parseInt(searchParams.get('tab') ?? '0', 10);
     const [categoryFilter, setCategoryFilter] = useState<'home' | 'movies' | 'shows' | 'mylist' | 'collections' | 'anime'>('home');
+    const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
     const syncingFromUrl = useRef(false);
     const [selectedDetailItem, setSelectedDetailItem] = useState<any>(null);
     const { isMobile } = useMediaQuery();
@@ -251,6 +252,11 @@ const Home = () => {
         );
     };
 
+    const applyGenreFilter = (query: any) => {
+        if (!selectedGenre) return query;
+        return { ...query, Genres: selectedGenre };
+    };
+
     const seeAllButtonStyle: React.CSSProperties = {
         padding: '12px 35px',
         fontSize: '1rem',
@@ -283,16 +289,16 @@ const Home = () => {
                         {categoryFilter === 'home' && (
                             <div className='zaflix-stagger-fade-in'>
                                 <Billboard />
-                                <NetworkSelector />
+                                <GenreSelector selectedGenre={selectedGenre} onGenreChange={setSelectedGenre} />
                                 {resumeItems.length > 0 && <MediaRow title="Continue Watching" itemsOverride={resumeItems} />}
-                                <MediaRow title="Suggested for You" query={{ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie,Series', Recursive: true }} />
-                                <MediaRow title="My List" query={{ Filters: 'IsFavorite', Limit: 12, Recursive: true }} />
-                                <MediaRow title="Featured Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
-                                <MediaRow title="Top 10 Movies" query={{ IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
-                                <MediaRow title="Top 10 TV Shows" query={{ IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
-                                <MediaRow title="Top 10 Anime" query={{ Genres: 'Anime', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
-                                <MediaRow title="Recently Added Movies" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true }} />
-                                <MediaRow title="Recently Added TV Shows" query={{ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true }} />
+                                <MediaRow title="Suggested for You" query={applyGenreFilter({ SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie,Series', Recursive: true })} />
+                                <MediaRow title="My List" query={applyGenreFilter({ Filters: 'IsFavorite', Limit: 12, Recursive: true })} />
+                                <MediaRow title="Featured Collections" query={applyGenreFilter({ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true })} />
+                                <MediaRow title="Top 10 Movies" query={applyGenreFilter({ IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true })} isTop10={true} />
+                                <MediaRow title="Top 10 TV Shows" query={applyGenreFilter({ IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true })} isTop10={true} />
+                                <MediaRow title="Top 10 Anime" query={applyGenreFilter({ Genres: 'Anime', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true })} isTop10={true} />
+                                <MediaRow title="Recently Added Movies" query={applyGenreFilter({ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Movie', Recursive: true })} />
+                                <MediaRow title="Recently Added TV Shows" query={applyGenreFilter({ SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, IncludeItemTypes: 'Series', Recursive: true })} />
                             </div>
                         )}
                     </div>
@@ -304,13 +310,13 @@ const Home = () => {
                         {categoryFilter === 'movies' && (
                             <div className='zaflix-stagger-fade-in'>
                                 <Billboard filterType="Movie" />
-                                <NetworkSelector />
-                                <MediaRow title="Movie Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true }} />
+                                <GenreSelector selectedGenre={selectedGenre} onGenreChange={setSelectedGenre} />
+                                <MediaRow title="Movie Collections" query={applyGenreFilter({ IncludeItemTypes: 'BoxSet', Limit: 12, Recursive: true })} />
                                 <MediaRow title="Continue Watching" itemsOverride={resumeItems.filter((i: any) => i.Type === 'Movie')} />
-                                <MediaRow title="Top 10 Movies" query={{ IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
-                                <MediaRow title="Popular in Thriller" query={{ Genres: 'Thriller', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
-                                <MediaRow title="Popular in Science Fiction" query={{ Genres: 'Science Fiction', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
-                                <MediaRow title="Popular in Action" query={{ Genres: 'Action', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
+                                <MediaRow title="Top 10 Movies" query={applyGenreFilter({ IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true })} isTop10={true} />
+                                <MediaRow title="Popular in Thriller" query={applyGenreFilter({ Genres: 'Thriller', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
+                                <MediaRow title="Popular in Science Fiction" query={applyGenreFilter({ Genres: 'Science Fiction', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
+                                <MediaRow title="Popular in Action" query={applyGenreFilter({ Genres: 'Action', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
                                 {movieLibraryId && (
                                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
                                         <button
@@ -346,12 +352,12 @@ const Home = () => {
                         {categoryFilter === 'shows' && (
                             <div className='zaflix-stagger-fade-in'>
                                 <Billboard filterType="Series" />
-                                <NetworkSelector />
+                                <GenreSelector selectedGenre={selectedGenre} onGenreChange={setSelectedGenre} />
                                 <MediaRow title="Continue Watching" itemsOverride={resumeItems.filter((i: any) => i.Type === 'Series' || i.Type === 'Episode')} />
-                                <MediaRow title="Top 10 TV Shows" query={{ IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true }} isTop10={true} />
-                                <MediaRow title="Popular in Drama" query={{ Genres: 'Drama', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
-                                <MediaRow title="Popular in Sci-Fi & Fantasy" query={{ Genres: 'Sci-Fi & Fantasy', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
-                                <MediaRow title="Popular in Action & Adventure" query={{ Genres: 'Action & Adventure', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true }} />
+                                <MediaRow title="Top 10 TV Shows" query={applyGenreFilter({ IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 10, Recursive: true })} isTop10={true} />
+                                <MediaRow title="Popular in Drama" query={applyGenreFilter({ Genres: 'Drama', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
+                                <MediaRow title="Popular in Sci-Fi & Fantasy" query={applyGenreFilter({ Genres: 'Sci-Fi & Fantasy', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
+                                <MediaRow title="Popular in Action & Adventure" query={applyGenreFilter({ Genres: 'Action & Adventure', IncludeItemTypes: 'Series', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
                                 {showLibraryId && (
                                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
                                         <button
@@ -386,7 +392,7 @@ const Home = () => {
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'anime' && (
                             <div className='zaflix-stagger-fade-in'>
-                                <MediaRow title="Anime Movies & Shows" query={{ Genres: 'Anime', Limit: 30, Recursive: true }} />
+                                <MediaRow title="Anime Movies & Shows" query={applyGenreFilter({ Genres: 'Anime', Limit: 30, Recursive: true })} />
                             </div>
                         )}
                     </div>
@@ -397,7 +403,7 @@ const Home = () => {
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'mylist' && (
                             <div className='zaflix-stagger-fade-in'>
-                                <MediaRow title="My Favorites List" query={{ Filters: 'IsFavorite', Limit: 30, Recursive: true }} />
+                                <MediaRow title="My Favorites List" query={applyGenreFilter({ Filters: 'IsFavorite', Limit: 30, Recursive: true })} />
                             </div>
                         )}
                     </div>
@@ -408,7 +414,7 @@ const Home = () => {
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'collections' && (
                             <div className='zaflix-stagger-fade-in'>
-                                <MediaRow title="My Collections" query={{ IncludeItemTypes: 'BoxSet', Limit: 30, Recursive: true }} />
+                                <MediaRow title="My Collections" query={applyGenreFilter({ IncludeItemTypes: 'BoxSet', Limit: 30, Recursive: true })} />
                             </div>
                         )}
                     </div>

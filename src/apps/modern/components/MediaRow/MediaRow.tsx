@@ -239,6 +239,25 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverrid
                                         background: ZAFlix.gradients.cardOverlay,
                                         zIndex: 2
                                     }} />
+                                    {item.UserData?.PlayedPercentage > 0 && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: 0, left: 0, right: 0,
+                                            height: '3px',
+                                            background: 'rgba(255,255,255,0.15)',
+                                            zIndex: 3,
+                                            borderBottomLeftRadius: ZAFlix.radii.card,
+                                            borderBottomRightRadius: ZAFlix.radii.card,
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{
+                                                width: `${Math.min(item.UserData.PlayedPercentage, 100)}%`,
+                                                height: '100%',
+                                                background: ZAFlix.gradients.accent,
+                                                transition: 'width 0.3s ease'
+                                            }} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
