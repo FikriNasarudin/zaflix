@@ -27,7 +27,7 @@ export const DEFAULT_COLOR_SCHEME: ColorSystemOptions = {
             main: '#c62828' // Red color
         },
         AppBar: {
-            defaultBg: '#202020'
+            defaultBg: '#0a0614'
         }
     }
 };
