@@ -78,9 +78,9 @@ const VideoPage: FC = () => {
                         right: 0,
                         color: 'white',
                         pointerEvents: 'unset !important',
-                        background: 'rgba(10, 6, 20, 0.55) !important',
-                        backdropFilter: 'blur(25px) !important',
-                        borderBottom: '1.5px solid rgba(211, 82, 255, 0.12) !important'
+                        background: 'rgba(10, 6, 20, 0.55)',
+                        backdropFilter: 'blur(25px)',
+                        borderBottom: '1.5px solid rgba(211, 82, 255, 0.12)'
                     }}
                 >
                     <AppToolbar

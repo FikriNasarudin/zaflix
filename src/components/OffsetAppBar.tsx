@@ -67,7 +67,7 @@ const OffsetAppBar: FC<PropsWithChildren<OffsetAppBarProps>> = ({
                 {...props}
                 ref={appBarRef}
                 position='fixed'
-                color={scrollTrigger ? 'default' : 'transparent'}
+                color='transparent'
                 elevation={scrollTrigger ? elevation : 0}
             >
                 {children}

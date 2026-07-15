@@ -187,22 +187,19 @@
     background: linear-gradient(180deg, rgba(10, 6, 20, 0.92) 0%, rgba(10, 6, 20, 0) 100%) !important;
     backdrop-filter: blur(12px) !important;
     border-bottom: 1.5px solid rgba(211, 82, 255, 0.1) !important;
-    height: 3.5em !important;
+    height: 2.8em !important;
+    min-height: 2.8em !important;
 }
 
 #videoOsdPage .videoOsdBottom {
     background: linear-gradient(0deg, rgba(10, 6, 20, 0.92) 0%, rgba(10, 6, 20, 0) 100%);
     backdrop-filter: blur(12px);
     border-top: 1.5px solid rgba(211, 82, 255, 0.1);
-    padding: 6px 0;
+    padding: 4px 0;
 }
 
 #videoOsdPage .videoOsdBottom .osdControls {
-    padding: 0 1em 0.6em;
-}
-
-#videoOsdPage .videoOsdBottom .osdControls {
-    padding: 0 1.2em 1em;
+    padding: 0 0.8em 0.3em;
 }
 
 #videoOsdPage .osdTitle {
@@ -249,6 +246,9 @@
     color: #dcd9fd;
     opacity: 0.85;
     transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+    min-width: auto !important;
 }
 
 #videoOsdPage .videoOsdBottom .buttons button:hover,
@@ -260,9 +260,14 @@
 
 #videoOsdPage .osdTimeText {
     font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-weight: 500;
     color: #dcd9fd;
+    margin-left: 0.5em;
+}
+
+#videoOsdPage .osdTextContainer {
+    margin-bottom: 0.3em !important;
 }
 
 /* Up Next Dialog Zaflix restyle */
@@ -323,9 +328,10 @@
 
 @media (orientation: landscape) and (max-height: 50em) {
     .skinHeader-withBackground.osdHeader {
-        height: 3.5em !important;
+        height: 2.8em !important;
+        min-height: 2.8em !important;
     }
     .videoOsdBottom {
-        padding-top: 3.5em !important;
+        padding-top: 2.8em !important;
     }
 }
