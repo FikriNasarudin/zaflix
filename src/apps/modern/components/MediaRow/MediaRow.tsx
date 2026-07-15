@@ -31,22 +31,11 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverrid
         const container = containerRef.current;
         if (!container) return;
 
-        const scrollAmount = container.clientWidth * 0.8;
-        const maxScroll = container.scrollWidth - container.clientWidth;
-
-        if (direction === 'left') {
-            if (container.scrollLeft <= 5) {
-                container.scrollTo({ left: maxScroll, behavior: 'smooth' });
-            } else {
-                container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-            }
-        } else {
-            if (container.scrollLeft >= maxScroll - 5) {
-                container.scrollTo({ left: 0, behavior: 'smooth' });
-            } else {
-                container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-            }
-        }
+        const scrollAmount = container.clientWidth * 0.7;
+        container.scrollBy({
+            left: direction === 'left' ? -scrollAmount : scrollAmount,
+            behavior: 'smooth'
+        });
     };
 
     // Global mouse move/up to support dragging outside the container
@@ -151,7 +140,6 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverrid
                         overflowX: 'auto',
                         padding: '8px 2px',
                         WebkitOverflowScrolling: 'touch',
-                        scrollSnapType: 'x proximity',
                         touchAction: 'pan-y',
                         cursor: isDragging ? 'grabbing' : 'grab',
                         userSelect: isDragging ? 'none' : undefined
@@ -183,8 +171,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverrid
                                     alignItems: 'center',
                                     width: isTop10 ? `calc(${cardWidth} + 45px)` : cardWidth,
                                     cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-                                    scrollSnapAlign: 'start'
+                                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
                                 }}
                                 onMouseEnter={(e) => {
                                     if (!isMobile) e.currentTarget.style.transform = 'scale(1.05)';

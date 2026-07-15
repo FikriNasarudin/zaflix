@@ -183,10 +183,22 @@
 
 /* --- Video Player OSD Overrides (Netflix-Style) --- */
 
+#videoOsdPage .skinHeader-withBackground.osdHeader {
+    background: linear-gradient(180deg, rgba(10, 6, 20, 0.92) 0%, rgba(10, 6, 20, 0) 100%) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1.5px solid rgba(211, 82, 255, 0.1) !important;
+    height: 3.5em !important;
+}
+
 #videoOsdPage .videoOsdBottom {
     background: linear-gradient(0deg, rgba(10, 6, 20, 0.92) 0%, rgba(10, 6, 20, 0) 100%);
     backdrop-filter: blur(12px);
     border-top: 1.5px solid rgba(211, 82, 255, 0.1);
+    padding: 6px 0;
+}
+
+#videoOsdPage .videoOsdBottom .osdControls {
+    padding: 0 1em 0.6em;
 }
 
 #videoOsdPage .videoOsdBottom .osdControls {

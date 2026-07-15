@@ -87,6 +87,11 @@ const ItemsView: FC = () => {
             shape = CardShape.Auto;
         }
 
+        // Force portrait for movie/tv/boxset library views
+        if (viewType === LibraryTab.Movies || viewType === LibraryTab.Series || viewType === LibraryTab.Collections || viewType === LibraryTab.Favorites) {
+            shape = CardShape.Portrait;
+        }
+
         const cardOptions: CardOptions = {
             shape,
             showTitle: libraryViewSettings.ShowTitle,

@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { clearBackdrop } from '../../../components/backdrop/backdrop';
 import Page from '../../../components/Page';
 import { EventType } from 'constants/eventType';
+import { useApi } from 'hooks/useApi';
 import Events from 'utils/events';
 
 import '../../../elements/emby-tabs/emby-tabs';
@@ -12,6 +13,7 @@ import '../../../elements/emby-button/emby-button';
 import '../../../elements/emby-scroller/emby-scroller';
 
 import { useUserViews } from 'hooks/api/useUserViews';
+import { useGetStudios } from 'hooks/useFetchItems';
 
 import Billboard from '../components/Billboard/Billboard';
 import DetailsModal from '../components/DetailsModal/DetailsModal';
@@ -39,6 +41,7 @@ type ControllerProps = {
 const Home = () => {
     const { data: userViews } = useUserViews();
     const { data: resumeItems = [] } = useResumeItems({ limit: 12 });
+    const { __legacyApiClient__: apiClient } = useApi();
     const [movieLibraryId, setMovieLibraryId] = useState<string | null>(null);
     const [showLibraryId, setShowLibraryId] = useState<string | null>(null);
 
@@ -317,6 +320,7 @@ const Home = () => {
                                 <MediaRow title="Popular in Thriller" query={applyGenreFilter({ Genres: 'Thriller', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
                                 <MediaRow title="Popular in Science Fiction" query={applyGenreFilter({ Genres: 'Science Fiction', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
                                 <MediaRow title="Popular in Action" query={applyGenreFilter({ Genres: 'Action', IncludeItemTypes: 'Movie', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
+                                {movieLibraryId && <StudioRow apiClient={apiClient} movieLibraryId={movieLibraryId} />}
                                 {movieLibraryId && (
                                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
                                         <button
@@ -414,7 +418,9 @@ const Home = () => {
                     <div style={{ padding: isMobile ? '0 1.5%' : '0 2.5%' }}>
                         {categoryFilter === 'collections' && (
                             <div className='zaflix-stagger-fade-in'>
-                                <MediaRow title="My Collections" query={applyGenreFilter({ IncludeItemTypes: 'BoxSet', Limit: 30, Recursive: true })} />
+                                <MediaRow title="Popular Collections" query={applyGenreFilter({ IncludeItemTypes: 'BoxSet', SortBy: 'CommunityRating,ProductionYear', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
+                                <MediaRow title="Recently Added Collections" query={applyGenreFilter({ IncludeItemTypes: 'BoxSet', SortBy: 'DateCreated', SortOrder: 'Descending', Limit: 12, Recursive: true })} />
+                                <MediaRow title="All Collections" query={applyGenreFilter({ IncludeItemTypes: 'BoxSet', SortBy: 'SortName', SortOrder: 'Ascending', Limit: 30, Recursive: true })} />
                             </div>
                         )}
                     </div>
@@ -429,6 +435,138 @@ const Home = () => {
                     onClose={() => setSelectedDetailItem(null)}
                 />
             )}
+        </div>
+    );
+};
+
+const StudioRow: React.FC<{ apiClient: any; movieLibraryId: string }> = ({ apiClient, movieLibraryId }) => {
+    const { data: studios = [] } = useGetStudios(movieLibraryId, [BaseItemKind.Movie]);
+    const { isMobile } = useMediaQuery();
+
+    if (!studios.length) return null;
+
+    const handleStudioClick = (studio: any) => {
+        if (!apiClient) return;
+        import('utils/dashboard').then(({ default: Dashboard }) => {
+            Dashboard.navigate(`details?id=${studio.Id}&serverId=${apiClient.serverId()}`);
+        });
+    };
+
+    return (
+        <div style={{ marginBottom: '30px', textAlign: 'left' }}>
+            <h2 style={{
+                fontSize: isMobile ? '1.15rem' : '1.35rem',
+                color: ZAFlix.colors.textPrimary,
+                marginBottom: '10px',
+                paddingLeft: '2px',
+                fontWeight: 700,
+                textShadow: ZAFlix.shadows.textGlowSubtle
+            }}>
+                Browse by Studio
+            </h2>
+            <div className='zaflix-hide-scrollbar' style={{
+                display: 'flex',
+                gap: '14px',
+                overflowX: 'auto',
+                padding: '6px 2px',
+                WebkitOverflowScrolling: 'touch'
+            }}>
+                {studios.map((studio: any) => {
+                    const logoUrl = apiClient
+                        ? apiClient.getUrl(`Items/${studio.Id}/Images/Logo?quality=90${studio.ImageTags?.Logo ? `&tag=${studio.ImageTags.Logo}` : ''}`)
+                        : '';
+                    const thumbUrl = apiClient
+                        ? apiClient.getUrl(`Items/${studio.Id}/Images/Thumb?quality=90${studio.ImageTags?.Thumb ? `&tag=${studio.ImageTags.Thumb}` : ''}`)
+                        : '';
+                    return (
+                        <div
+                            key={studio.Id}
+                            onClick={() => handleStudioClick(studio)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleStudioClick(studio); } }}
+                            role='button'
+                            tabIndex={0}
+                            className='zaflix-focus-visible will-change-transform'
+                            style={{
+                                flex: '0 0 auto',
+                                width: isMobile ? '130px' : '160px',
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                        >
+                            <div style={{
+                                width: '100%',
+                                height: isMobile ? '70px' : '90px',
+                                borderRadius: ZAFlix.radii.card,
+                                overflow: 'hidden',
+                                border: `1px solid ${ZAFlix.colors.border}`,
+                                background: ZAFlix.colors.card,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '10px'
+                            }}>
+                                {logoUrl ? (
+                                    <img
+                                        src={logoUrl}
+                                        alt={studio.Name || ''}
+                                        loading='lazy'
+                                        className='zaflix-image-fade-in'
+                                        onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                        style={{
+                                            maxWidth: '100%',
+                                            maxHeight: '100%',
+                                            objectFit: 'contain'
+                                        }}
+                                        onError={(e) => {
+                                            if (thumbUrl) {
+                                                (e.currentTarget as HTMLImageElement).src = thumbUrl;
+                                            } else {
+                                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                (e.currentTarget as HTMLImageElement).parentElement!.innerText = studio.Name?.[0]?.toUpperCase() || '?';
+                                            }
+                                        }}
+                                    />
+                                ) : thumbUrl ? (
+                                    <img
+                                        src={thumbUrl}
+                                        alt={studio.Name || ''}
+                                        loading='lazy'
+                                        className='zaflix-image-fade-in'
+                                        onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    <span style={{
+                                        fontSize: 24,
+                                        fontWeight: 700,
+                                        color: ZAFlix.colors.accent
+                                    }}>
+                                        {studio.Name?.[0]?.toUpperCase() || '?'}
+                                    </span>
+                                )}
+                            </div>
+                            <div style={{
+                                marginTop: '6px',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                textAlign: 'center',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                color: ZAFlix.colors.textSecondary
+                            }}>
+                                {studio.Name}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };

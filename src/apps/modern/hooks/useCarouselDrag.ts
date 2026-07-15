@@ -59,7 +59,7 @@ export const useCarouselDrag = () => {
         if (!containerRef.current) return;
 
         const delta = drag.current.startX - x;
-        const walk = delta * 1.2;
+        const walk = delta;
         containerRef.current.scrollLeft = drag.current.scrollLeft + walk;
 
         const now = Date.now();
