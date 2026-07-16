@@ -185,14 +185,12 @@
 
 #videoOsdPage .skinHeader-withBackground.osdHeader {
     background: transparent !important;
-    backdrop-filter: blur(8px) !important;
     height: 2.8em !important;
     min-height: 2.8em !important;
 }
 
 #videoOsdPage .videoOsdBottom {
     background: transparent;
-    backdrop-filter: blur(8px);
     padding: 4px 0;
 }
 
