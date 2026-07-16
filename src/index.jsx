@@ -46,10 +46,22 @@ import './styles/dashboard.scss';
 import './styles/detailtable.scss';
 import './styles/librarybrowser.scss';
 
-// Detect Capacitor Android TV mode and patch browser flags early
-if (window.appMode === 'android' && window.appModeTv) {
-    browser.tv = true;
-    browser.keyboard = true;
+// Detect Capacitor Android mode and patch browser flags
+if (window.appMode === 'android') {
+    if (window.appModeTv) {
+        browser.tv = true;
+        browser.keyboard = true;
+    }
+    // Load native ExoPlayer plugin if Capacitor bridge is available
+    if (window.Capacitor?.Plugins?.ZaflixPlayer) {
+        pluginManager.loadPlugin(
+            import('./plugins/exoPlayer/plugin')
+        ).then(() => {
+            console.log('[Zaflix] native ExoPlayer plugin registered');
+        }).catch(err => {
+            console.warn('[Zaflix] failed to load ExoPlayer plugin:', err);
+        });
+    }
 }
 
 async function init() {
