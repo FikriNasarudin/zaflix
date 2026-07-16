@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import com.getcapacitor.BridgeActivity
-import com.zaflix.app.BuildConfig
 
 class NativeShellBridge(private val activity: MainActivity) {
 
@@ -35,7 +34,14 @@ class NativeShellBridge(private val activity: MainActivity) {
     fun appName(): String = "Zaflix"
 
     @JavascriptInterface
-    fun appVersion(): String = BuildConfig.VERSION_NAME
+    fun appVersion(): String {
+        return try {
+            val pkg = activity.packageManager.getPackageInfo(activity.packageName, 0)
+            pkg.versionName ?: "1.0"
+        } catch (_: Exception) {
+            "1.0"
+        }
+    }
 
     @JavascriptInterface
     fun exit() {
@@ -136,7 +142,7 @@ class MainActivity : BridgeActivity() {
 
         registerPlugin(ZaflixPlayerPlugin::class.java)
 
-        val isTvFlavor = BuildConfig.FLAVOR == "tv"
+        val isTvFlavor = packageName.endsWith(".tv")
         bridge.webView.evaluateJavascript(
             "window.appMode = 'android';" +
             "window.appModeTv = $isTvFlavor;" +
