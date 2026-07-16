@@ -2,20 +2,19 @@ package com.zaflix.app
 
 import android.net.Uri
 import androidx.media3.common.C
-import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
-import androidx.media3.exoplayer.source.hls.HlsMediaSource
-import androidx.media3.exoplayer.source.dash.DashMediaSource
-import androidx.media3.exoplayer.source.smoothstreaming.SsMediaSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.dash.DashMediaSource
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.smoothstreaming.SsMediaSource
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -77,7 +76,7 @@ class ZaflixPlayerPlugin : Plugin() {
     fun loadSource(call: PluginCall) {
         val url = call.getString("url") ?: return call.reject("url is required")
         val mimeType = call.getString("mimeType") ?: ""
-        val startPositionMs = call.getDouble("startPositionMs", 0.0).toLong()
+        val startPositionMs = (call.getDouble("startPositionMs") ?: 0.0).toLong()
 
         val exoPlayer = player ?: run {
             initPlayer()
@@ -92,11 +91,7 @@ class ZaflixPlayerPlugin : Plugin() {
         )
 
         val mediaSource = buildMediaSource(dataSourceFactory, Uri.parse(url), mimeType)
-
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(url)
-            .setUri(url)
-            .build()
+        val mediaItem = MediaItem.fromUri(url)
 
         exoPlayer.setMediaSource(mediaSource)
         exoPlayer.seekTo(startPositionMs)
@@ -112,15 +107,16 @@ class ZaflixPlayerPlugin : Plugin() {
         uri: Uri,
         mimeType: String
     ): MediaSource {
+        val mediaItem = MediaItem.fromUri(uri)
         return when {
             mimeType.contains("hls") || mimeType.contains("x-mpegurl") || mimeType == "application/x-mpegURL" ->
-                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(uri)
+                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
             mimeType.contains("dash") || mimeType.contains("mpd") || mimeType == "application/dash+xml" ->
-                DashMediaSource.Factory(dataSourceFactory).createMediaSource(uri)
+                DashMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
             mimeType.contains("ss") || mimeType == "application/vnd.ms-sstr+xml" ->
-                SsMediaSource.Factory(dataSourceFactory).createMediaSource(uri)
+                SsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
             else ->
-                ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(uri)
+                ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
         }
     }
 
@@ -153,7 +149,7 @@ class ZaflixPlayerPlugin : Plugin() {
 
     @PluginMethod
     fun seek(call: PluginCall) {
-        val positionMs = call.getDouble("positionMs", 0.0).toLong()
+        val positionMs = (call.getDouble("positionMs") ?: 0.0).toLong()
         player?.seekTo(positionMs)
         call.resolve()
     }
@@ -172,7 +168,7 @@ class ZaflixPlayerPlugin : Plugin() {
 
     @PluginMethod
     fun setVolume(call: PluginCall) {
-        val vol = call.getFloat("volume", 1.0f).coerceIn(0f, 1f)
+        val vol = (call.getFloat("volume") ?: 1.0f).coerceIn(0f, 1f)
         player?.volume = vol
         call.resolve()
     }
@@ -185,14 +181,16 @@ class ZaflixPlayerPlugin : Plugin() {
 
     @PluginMethod
     fun setMute(call: PluginCall) {
-        val muted = call.getBoolean("muted", false)
-        player?.volume = if (muted) 0f else 1f
+        val muted = call.getBoolean("muted")
+        if (muted != null) {
+            player?.volume = if (muted) 0f else 1f
+        }
         call.resolve()
     }
 
     @PluginMethod
     fun setRate(call: PluginCall) {
-        val rate = call.getFloat("rate", 1.0f)
+        val rate = call.getFloat("rate") ?: 1.0f
         player?.setPlaybackSpeed(rate)
         call.resolve()
     }
@@ -205,15 +203,14 @@ class ZaflixPlayerPlugin : Plugin() {
 
     @PluginMethod
     fun setSubtitleStream(call: PluginCall) {
-        val index = call.getInt("index", -1)
+        val index = call.getInt("index")
         val exoPlayer = player
-        if (index >= 0 && exoPlayer != null) {
+        if (index != null && index >= 0 && exoPlayer != null) {
             val tracks = exoPlayer.currentTracks
             var selectedGroup: androidx.media3.common.Tracks.Group? = null
             for (group in tracks.groups) {
                 if (group.type == C.TRACK_TYPE_TEXT) {
-                    val groupIndex = tracks.groups.indexOf(group)
-                    if (groupIndex == index) {
+                    if (tracks.groups.indexOf(group) == index) {
                         selectedGroup = group
                         break
                     }
@@ -234,15 +231,14 @@ class ZaflixPlayerPlugin : Plugin() {
 
     @PluginMethod
     fun setAudioStream(call: PluginCall) {
-        val index = call.getInt("index", -1)
+        val index = call.getInt("index")
         val exoPlayer = player
-        if (index >= 0 && exoPlayer != null) {
+        if (index != null && index >= 0 && exoPlayer != null) {
             val tracks = exoPlayer.currentTracks
             var selectedGroup: androidx.media3.common.Tracks.Group? = null
             for (group in tracks.groups) {
                 if (group.type == C.TRACK_TYPE_AUDIO) {
-                    val groupIndex = tracks.groups.indexOf(group)
-                    if (groupIndex == index) {
+                    if (tracks.groups.indexOf(group) == index) {
                         selectedGroup = group
                         break
                     }
@@ -270,10 +266,11 @@ class ZaflixPlayerPlugin : Plugin() {
         if (exoPlayer != null) {
             for (group in exoPlayer.currentTracks.groups) {
                 val format = group.getTrackFormat(0)
+                val idx = exoPlayer.currentTracks.groups.indexOf(group)
                 val track = JSObject().apply {
-                    put("index", exoPlayer.currentTracks.groups.indexOf(group))
+                    put("index", idx)
                     put("language", format.language ?: "")
-                    put("label", format.label ?: format.language ?: "Track ${exoPlayer.currentTracks.groups.indexOf(group)}")
+                    put("label", format.label ?: format.language ?: "Track $idx")
                     put("mimeType", format.sampleMimeType ?: "")
                 }
                 when (group.type) {
