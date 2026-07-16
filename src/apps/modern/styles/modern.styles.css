@@ -185,6 +185,7 @@
 
 #videoOsdPage .skinHeader-withBackground.osdHeader {
     background: transparent !important;
+    border-bottom: none !important;
     height: 2.8em !important;
     min-height: 2.8em !important;
 }
