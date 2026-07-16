@@ -42,16 +42,16 @@ jobs:
       - name: Build Android APK + AAB (${{ matrix.flavor }})
         run: |
           cd android
-          ./gradlew assemble${{ matrix.flavor == 'phone' && 'Phone' || 'Tv' }}Release
-          ./gradlew bundle${{ matrix.flavor == 'phone' && 'Phone' || 'Tv' }}Release
+          ./gradlew assemble${{ matrix.flavor == 'phone' && 'Phone' || 'Tv' }}Debug
+          ./gradlew bundle${{ matrix.flavor == 'phone' && 'Phone' || 'Tv' }}Debug
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: zaflix-${{ matrix.flavor }}
           path: |
-            android/app/build/outputs/apk/${{ matrix.flavor }}/release/*.apk
-            android/app/build/outputs/bundle/${{ matrix.flavor }}Release/*.aab
+            android/app/build/outputs/apk/${{ matrix.flavor }}/debug/*.apk
+            android/app/build/outputs/bundle/${{ matrix.flavor }}Debug/*.aab
           if-no-files-found: error
 
   create-release:
