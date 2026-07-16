@@ -9,6 +9,8 @@
     "@babel/plugin-transform-modules-umd": "7.29.7",
     "@babel/preset-env": "7.29.7",
     "@babel/preset-react": "7.29.7",
+    "@capacitor/android": "8.4.2",
+    "@capacitor/cli": "8.4.2",
     "@eslint-community/eslint-plugin-eslint-comments": "4.7.2",
     "@eslint/js": "9.39.4",
     "@stylistic/eslint-plugin": "4.4.1",
@@ -77,6 +79,13 @@
     "worker-loader": "3.0.8"
   },
   "dependencies": {
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/keyboard": "8.0.5",
+    "@capacitor/preferences": "8.0.1",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.3",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@fontsource/noto-sans": "5.2.10",
