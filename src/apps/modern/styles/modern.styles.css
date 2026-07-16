@@ -184,17 +184,15 @@
 /* --- Video Player OSD Overrides (Netflix-Style) --- */
 
 #videoOsdPage .skinHeader-withBackground.osdHeader {
-    background: linear-gradient(180deg, rgba(10, 6, 20, 0.92) 0%, rgba(10, 6, 20, 0) 100%) !important;
+    background: linear-gradient(180deg, rgba(10, 6, 20, 0.65) 0%, rgba(10, 6, 20, 0) 100%) !important;
     backdrop-filter: blur(12px) !important;
-    border-bottom: 1.5px solid rgba(211, 82, 255, 0.1) !important;
     height: 2.8em !important;
     min-height: 2.8em !important;
 }
 
 #videoOsdPage .videoOsdBottom {
-    background: linear-gradient(0deg, rgba(10, 6, 20, 0.92) 0%, rgba(10, 6, 20, 0) 100%);
+    background: linear-gradient(0deg, rgba(10, 6, 20, 0.65) 0%, rgba(10, 6, 20, 0) 100%);
     backdrop-filter: blur(12px);
-    border-top: 1.5px solid rgba(211, 82, 255, 0.1);
     padding: 4px 0;
 }
 
@@ -264,6 +262,14 @@
     font-weight: 500;
     color: #dcd9fd;
     margin-left: 0.5em;
+}
+
+#videoOsdPage .endsAtText {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #c26df0;
+    text-shadow: 0 0 8px rgba(194, 109, 240, 0.3);
 }
 
 #videoOsdPage .osdTextContainer {
