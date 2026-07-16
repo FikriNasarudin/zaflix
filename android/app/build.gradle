@@ -1,8 +1,26 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace = "com.zaflix.app"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    flavorDimensions "target"
+    productFlavors {
+        phone {
+            dimension "target"
+            applicationIdSuffix ".phone"
+            versionNameSuffix "-phone"
+            manifestPlaceholders = [isLeanback: "false"]
+        }
+        tv {
+            dimension "target"
+            applicationIdSuffix ".tv"
+            versionNameSuffix "-tv"
+            manifestPlaceholders = [isLeanback: "true"]
+        }
+    }
+
     defaultConfig {
         applicationId "com.zaflix.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -40,6 +58,10 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
+    tvImplementation "androidx.leanback:leanback:1.2.0"
+    tvImplementation "androidx.leanback:leanback-preference:1.2.0"
 }
 
 apply from: 'capacitor.build.gradle'

@@ -21,3 +21,13 @@ config.json
 
 # environment related
 .envrc
+
+# Android / Capacitor
+*.apk
+*.aab
+local.properties
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+android/.externalNativeBuild/
