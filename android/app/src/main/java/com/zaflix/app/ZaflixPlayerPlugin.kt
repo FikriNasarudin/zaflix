@@ -2,9 +2,11 @@ package com.zaflix.app
 
 import android.net.Uri
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
@@ -12,16 +14,13 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.source.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.dash.DashMediaSource
 import androidx.media3.exoplayer.source.smoothstreaming.SsMediaSource
-import androidx.media3.exoplayer.drm.DefaultDrmSessionManagerProvider
-import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.common.MimeTypes
+import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
-import org.json.JSONObject
 
 @CapacitorPlugin(name = "ZaflixPlayer")
 @UnstableApi
@@ -37,8 +36,8 @@ class ZaflixPlayerPlugin : Plugin() {
     }
 
     private fun initPlayer() {
-        val context = activity ?: return
-        player = ExoPlayer.Builder(context).build().also { exo ->
+        val ctx = activity ?: return
+        player = ExoPlayer.Builder(ctx).build().also { exo ->
             exo.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     val state = when (playbackState) {
@@ -48,25 +47,25 @@ class ZaflixPlayerPlugin : Plugin() {
                         Player.STATE_IDLE -> "idle"
                         else -> "unknown"
                     }
-                    notifyJS("onPlaybackStateChanged", JSONObject().apply {
+                    notifyJS("onPlaybackStateChanged", JSObject().apply {
                         put("state", state)
                     })
 
                     if (playbackState == Player.STATE_ENDED) {
-                        notifyJS("onEnded", JSONObject())
+                        notifyJS("onEnded", JSObject())
                         stopPositionTracker()
                     }
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
-                    notifyJS("onError", JSONObject().apply {
+                    notifyJS("onError", JSObject().apply {
                         put("code", error.errorCodeName)
                         put("message", error.localizedMessage ?: "Unknown error")
                     })
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    notifyJS("onIsPlayingChanged", JSONObject().apply {
+                    notifyJS("onIsPlayingChanged", JSObject().apply {
                         put("isPlaying", isPlaying)
                     })
                 }
@@ -78,11 +77,9 @@ class ZaflixPlayerPlugin : Plugin() {
     fun loadSource(call: PluginCall) {
         val url = call.getString("url") ?: return call.reject("url is required")
         val mimeType = call.getString("mimeType") ?: ""
-        val drmScheme = call.getString("drmScheme") ?: ""
-        val drmLicenseUrl = call.getString("drmLicenseUrl") ?: ""
         val startPositionMs = call.getDouble("startPositionMs", 0.0).toLong()
 
-        val player = player ?: run {
+        val exoPlayer = player ?: run {
             initPlayer()
             this.player
         } ?: return call.reject("player not initialized")
@@ -94,17 +91,17 @@ class ZaflixPlayerPlugin : Plugin() {
                 .setUserAgent("Zaflix/1.0")
         )
 
-        val mediaSource = buildMediaSource(dataSourceFactory, Uri.parse(url), mimeType, drmScheme, drmLicenseUrl)
+        val mediaSource = buildMediaSource(dataSourceFactory, Uri.parse(url), mimeType)
 
         val mediaItem = MediaItem.Builder()
             .setMediaId(url)
             .setUri(url)
             .build()
 
-        player.setMediaSource(mediaSource)
-        player.seekTo(startPositionMs)
-        player.prepare()
-        player.play()
+        exoPlayer.setMediaSource(mediaSource)
+        exoPlayer.seekTo(startPositionMs)
+        exoPlayer.prepare()
+        exoPlayer.play()
 
         startPositionTracker()
         call.resolve()
@@ -113,9 +110,7 @@ class ZaflixPlayerPlugin : Plugin() {
     private fun buildMediaSource(
         dataSourceFactory: DefaultDataSource.Factory,
         uri: Uri,
-        mimeType: String,
-        drmScheme: String,
-        drmLicenseUrl: String
+        mimeType: String
     ): MediaSource {
         return when {
             mimeType.contains("hls") || mimeType.contains("x-mpegurl") || mimeType == "application/x-mpegURL" ->
@@ -166,13 +161,13 @@ class ZaflixPlayerPlugin : Plugin() {
     @PluginMethod
     fun getPosition(call: PluginCall) {
         val pos = player?.currentPosition ?: 0L
-        call.resolve(JSONObject().apply { put("position", pos.toDouble()) })
+        call.resolve(JSObject().apply { put("position", pos.toDouble()) })
     }
 
     @PluginMethod
     fun getDuration(call: PluginCall) {
         val dur = player?.duration ?: 0L
-        call.resolve(JSONObject().apply { put("duration", dur.toDouble()) })
+        call.resolve(JSObject().apply { put("duration", dur.toDouble()) })
     }
 
     @PluginMethod
@@ -185,7 +180,7 @@ class ZaflixPlayerPlugin : Plugin() {
     @PluginMethod
     fun getVolume(call: PluginCall) {
         val vol = player?.volume ?: 1f
-        call.resolve(JSONObject().apply { put("volume", vol.toDouble()) })
+        call.resolve(JSObject().apply { put("volume", vol.toDouble()) })
     }
 
     @PluginMethod
@@ -205,32 +200,34 @@ class ZaflixPlayerPlugin : Plugin() {
     @PluginMethod
     fun getRate(call: PluginCall) {
         val rate = player?.playbackParameters?.speed ?: 1f
-        call.resolve(JSONObject().apply { put("rate", rate.toDouble()) })
+        call.resolve(JSObject().apply { put("rate", rate.toDouble()) })
     }
 
     @PluginMethod
     fun setSubtitleStream(call: PluginCall) {
         val index = call.getInt("index", -1)
-        if (index >= 0) {
-            player?.trackSelectionParameters = player?.trackSelectionParameters
-                ?.buildUpon()
-                ?.setPreferredTextLanguage(null)
-                ?.setDisabledTrackTypes(setOf(C.TRACK_TYPE_TEXT))
-                ?.apply {
-                    if (index < player?.trackInfo?.trackGroups?.length ?: 0) {
-                        val group = player?.trackInfo?.trackGroups?.get(index)
-                        if (group != null) {
-                            selectTracks(
-                                setOf(C.TRACK_TYPE_TEXT),
-                                group.type,
-                                group.getFormat(0).language,
-                                group.getFormat(0).sampleMimeType,
-                                true
-                            )
-                        }
+        val exoPlayer = player
+        if (index >= 0 && exoPlayer != null) {
+            val tracks = exoPlayer.currentTracks
+            var selectedGroup: androidx.media3.common.Tracks.Group? = null
+            for (group in tracks.groups) {
+                if (group.type == C.TRACK_TYPE_TEXT) {
+                    val groupIndex = tracks.groups.indexOf(group)
+                    if (groupIndex == index) {
+                        selectedGroup = group
+                        break
                     }
                 }
-                ?.build()
+            }
+            val params = exoPlayer.trackSelectionParameters
+                .buildUpon()
+                .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            if (selectedGroup != null && selectedGroup.length > 0) {
+                params.setOverrideForType(
+                    TrackSelectionOverride(selectedGroup.mediaTrackGroup, 0)
+                )
+            }
+            exoPlayer.trackSelectionParameters = params.build()
         }
         call.resolve()
     }
@@ -238,53 +235,55 @@ class ZaflixPlayerPlugin : Plugin() {
     @PluginMethod
     fun setAudioStream(call: PluginCall) {
         val index = call.getInt("index", -1)
-        if (index >= 0) {
-            player?.trackSelectionParameters = player?.trackSelectionParameters
-                ?.buildUpon()
-                ?.setPreferredAudioLanguage(null)
-                ?.apply {
-                    if (index < player?.trackInfo?.trackGroups?.length ?: 0) {
-                        val group = player?.trackInfo?.trackGroups?.get(index)
-                        if (group != null) {
-                            selectTracks(
-                                setOf(C.TRACK_TYPE_AUDIO),
-                                group.type,
-                                group.getFormat(0).language,
-                                null,
-                                true
-                            )
-                        }
+        val exoPlayer = player
+        if (index >= 0 && exoPlayer != null) {
+            val tracks = exoPlayer.currentTracks
+            var selectedGroup: androidx.media3.common.Tracks.Group? = null
+            for (group in tracks.groups) {
+                if (group.type == C.TRACK_TYPE_AUDIO) {
+                    val groupIndex = tracks.groups.indexOf(group)
+                    if (groupIndex == index) {
+                        selectedGroup = group
+                        break
                     }
                 }
-                ?.build()
+            }
+            val params = exoPlayer.trackSelectionParameters
+                .buildUpon()
+                .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+            if (selectedGroup != null && selectedGroup.length > 0) {
+                params.setOverrideForType(
+                    TrackSelectionOverride(selectedGroup.mediaTrackGroup, 0)
+                )
+            }
+            exoPlayer.trackSelectionParameters = params.build()
         }
         call.resolve()
     }
 
     @PluginMethod
     fun getTracks(call: PluginCall) {
-        val trackInfo = player?.trackInfo
-        val audioTracks = mutableListOf<JSONObject>()
-        val textTracks = mutableListOf<JSONObject>()
+        val exoPlayer = player
+        val audioTracks = mutableListOf<JSObject>()
+        val textTracks = mutableListOf<JSObject>()
 
-        if (trackInfo != null) {
-            for (i in 0 until trackInfo.trackGroups.length) {
-                val group = trackInfo.trackGroups[i]
-                val format = group.getFormat(0)
-                val track = JSONObject().apply {
-                    put("index", i)
+        if (exoPlayer != null) {
+            for (group in exoPlayer.currentTracks.groups) {
+                val format = group.getTrackFormat(0)
+                val track = JSObject().apply {
+                    put("index", exoPlayer.currentTracks.groups.indexOf(group))
                     put("language", format.language ?: "")
-                    put("label", format.label ?: format.language ?: "Track $i")
+                    put("label", format.label ?: format.language ?: "Track ${exoPlayer.currentTracks.groups.indexOf(group)}")
                     put("mimeType", format.sampleMimeType ?: "")
                 }
-                when (format.type) {
+                when (group.type) {
                     C.TRACK_TYPE_AUDIO -> audioTracks.add(track)
                     C.TRACK_TYPE_TEXT -> textTracks.add(track)
                 }
             }
         }
 
-        call.resolve(JSONObject().apply {
+        call.resolve(JSObject().apply {
             put("audioTracks", audioTracks.toTypedArray())
             put("textTracks", textTracks.toTypedArray())
         })
@@ -299,7 +298,7 @@ class ZaflixPlayerPlugin : Plugin() {
                 val dur = player?.duration ?: 0L
                 val isPlaying = player?.isPlaying ?: false
 
-                notifyJS("onTimeUpdate", JSONObject().apply {
+                notifyJS("onTimeUpdate", JSObject().apply {
                     put("position", pos.toDouble())
                     put("duration", dur.toDouble())
                     put("isPlaying", isPlaying)
@@ -320,10 +319,10 @@ class ZaflixPlayerPlugin : Plugin() {
         positionTracker = null
     }
 
-    private fun notifyJS(eventName: String, data: JSONObject) {
-        bridge?.let { bridge ->
+    private fun notifyJS(eventName: String, data: JSObject) {
+        bridge?.let { b ->
             val js = "window.ZaflixPlayer && window.ZaflixPlayer.onEvent && window.ZaflixPlayer.onEvent('$eventName', $data)"
-            bridge.webView.evaluateJavascript(js, null)
+            b.webView.evaluateJavascript(js, null)
         }
     }
 
