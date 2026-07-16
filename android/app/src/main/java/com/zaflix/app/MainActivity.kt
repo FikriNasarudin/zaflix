@@ -67,7 +67,7 @@ class NativeShellBridge(private val activity: MainActivity) {
             "physicalvolumecontrol" -> false
             "sharing" -> true
             "filedownload" -> true
-            "chromecast" -> true
+            "chromecast" -> !activity.packageName.endsWith(".tv")
             else -> true
         }
     }

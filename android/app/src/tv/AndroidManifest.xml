@@ -10,7 +10,8 @@
         android:required="false" />
 
     <application
-        android:banner="@drawable/tv_banner">
+        android:banner="@drawable/tv_banner"
+        android:theme="@style/Theme.Leanback">
 
         <activity android:name=".MainActivity">
             <intent-filter>

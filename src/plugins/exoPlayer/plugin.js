@@ -1,3 +1,5 @@
+import { appHost } from '../../components/apphost';
+
 let currentPosition = 0;
 let currentDuration = 0;
 let isPaused = false;
@@ -7,6 +9,7 @@ let playbackRate = 1;
 let src = null;
 let playerListeners = {};
 let timePollInterval = null;
+let mediaStreams = null;
 
 function hasNativePlayer() {
     return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ZaflixPlayer;
@@ -69,6 +72,7 @@ export default class ExoPlayerPlugin {
 
         src = options.url || null;
         isPaused = false;
+        mediaStreams = options.mediaSource?.MediaStreams || null;
 
         await native().loadSource({
             url: options.url,
@@ -183,15 +187,25 @@ export default class ExoPlayerPlugin {
     }
 
     setSubtitleStreamIndex(index) {
-        if (hasNativePlayer()) {
-            native().setSubtitleStream({ index });
+        if (!hasNativePlayer()) return;
+        let mapped = index;
+        if (mediaStreams) {
+            const textStreams = mediaStreams.filter(s => s.Type === 'Subtitle');
+            const idx = textStreams.findIndex(s => s.Index === index);
+            if (idx >= 0) mapped = idx;
         }
+        native().setSubtitleStream({ index: mapped });
     }
 
     setAudioStreamIndex(index) {
-        if (hasNativePlayer()) {
-            native().setAudioStream({ index });
+        if (!hasNativePlayer()) return;
+        let mapped = index;
+        if (mediaStreams) {
+            const audioStreams = mediaStreams.filter(s => s.Type === 'Audio');
+            const idx = audioStreams.findIndex(s => s.Index === index);
+            if (idx >= 0) mapped = idx;
         }
+        native().setAudioStream({ index: mapped });
     }
 
     canSetAudioStreamIndex() {
@@ -211,7 +225,19 @@ export default class ExoPlayerPlugin {
     }
 
     getDeviceProfile(item) {
-        return Promise.resolve(null);
+        return appHost.getDeviceProfile(item);
+    }
+
+    resume() {
+        this.unpause();
+    }
+
+    seekable() {
+        return true;
+    }
+
+    getBufferedRanges() {
+        return [];
     }
 }
 

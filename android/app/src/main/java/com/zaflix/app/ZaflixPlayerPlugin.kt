@@ -27,6 +27,7 @@ class ZaflixPlayerPlugin : Plugin() {
 
     private var player: ExoPlayer? = null
     private var positionTracker: Thread? = null
+    @Volatile
     private var running = false
 
     override fun load() {
@@ -87,6 +88,8 @@ class ZaflixPlayerPlugin : Plugin() {
             context,
             DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(true)
+                .setConnectTimeoutMs(15000)
+                .setReadTimeoutMs(30000)
                 .setUserAgent("Zaflix/1.0")
         )
 
@@ -207,10 +210,12 @@ class ZaflixPlayerPlugin : Plugin() {
         val exoPlayer = player
         if (index != null && index >= 0 && exoPlayer != null) {
             val tracks = exoPlayer.currentTracks
+            var textIdx = -1
             var selectedGroup: androidx.media3.common.Tracks.Group? = null
             for (group in tracks.groups) {
                 if (group.type == C.TRACK_TYPE_TEXT) {
-                    if (tracks.groups.indexOf(group) == index) {
+                    textIdx++
+                    if (textIdx == index) {
                         selectedGroup = group
                         break
                     }
@@ -235,10 +240,12 @@ class ZaflixPlayerPlugin : Plugin() {
         val exoPlayer = player
         if (index != null && index >= 0 && exoPlayer != null) {
             val tracks = exoPlayer.currentTracks
+            var audioIdx = -1
             var selectedGroup: androidx.media3.common.Tracks.Group? = null
             for (group in tracks.groups) {
                 if (group.type == C.TRACK_TYPE_AUDIO) {
-                    if (tracks.groups.indexOf(group) == index) {
+                    audioIdx++
+                    if (audioIdx == index) {
                         selectedGroup = group
                         break
                     }

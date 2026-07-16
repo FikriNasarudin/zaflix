@@ -5,6 +5,10 @@ android {
     namespace = "com.zaflix.app"
     compileSdk = rootProject.ext.compileSdkVersion
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     flavorDimensions "target"
     productFlavors {
         phone {
@@ -60,11 +64,11 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
-    implementation "androidx.media3:media3-exoplayer:1.6.1"
-    implementation "androidx.media3:media3-exoplayer-hls:1.6.1"
-    implementation "androidx.media3:media3-exoplayer-dash:1.6.1"
-    implementation "androidx.media3:media3-exoplayer-smoothstreaming:1.6.1"
-    implementation "androidx.media3:media3-ui:1.6.1"
+    tvImplementation "androidx.media3:media3-exoplayer:1.6.1"
+    tvImplementation "androidx.media3:media3-exoplayer-hls:1.6.1"
+    tvImplementation "androidx.media3:media3-exoplayer-dash:1.6.1"
+    tvImplementation "androidx.media3:media3-exoplayer-smoothstreaming:1.6.1"
+    tvImplementation "androidx.media3:media3-ui:1.6.1"
     tvImplementation "androidx.leanback:leanback:1.2.0"
     tvImplementation "androidx.leanback:leanback-preference:1.2.0"
 }

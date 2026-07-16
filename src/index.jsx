@@ -46,24 +46,6 @@ import './styles/dashboard.scss';
 import './styles/detailtable.scss';
 import './styles/librarybrowser.scss';
 
-// Detect Capacitor Android mode and patch browser flags
-if (window.appMode === 'android') {
-    if (window.appModeTv) {
-        browser.tv = true;
-        browser.keyboard = true;
-    }
-    // Load native ExoPlayer plugin if Capacitor bridge is available
-    if (window.Capacitor?.Plugins?.ZaflixPlayer) {
-        pluginManager.loadPlugin(
-            import('./plugins/exoPlayer/plugin')
-        ).then(() => {
-            console.log('[Zaflix] native ExoPlayer plugin registered');
-        }).catch(err => {
-            console.warn('[Zaflix] failed to load ExoPlayer plugin:', err);
-        });
-    }
-}
-
 async function init() {
     // Log current version to console to help out with issue triage and debugging
     console.info(
@@ -86,6 +68,24 @@ build: ${__JF_BUILD_VERSION__}`);
 
     // Initialize app host
     await appHost.init();
+
+    // Detect Capacitor Android mode and patch browser flags
+    if (window.appMode === 'android') {
+        if (window.appModeTv) {
+            browser.tv = true;
+            browser.keyboard = true;
+        }
+        // Load native ExoPlayer plugin if Capacitor bridge is available
+        if (window.Capacitor?.Plugins?.ZaflixPlayer) {
+            pluginManager.loadPlugin(
+                import('./plugins/exoPlayer/plugin')
+            ).then(() => {
+                console.log('[Zaflix] native ExoPlayer plugin registered');
+            }).catch(err => {
+                console.warn('[Zaflix] failed to load ExoPlayer plugin:', err);
+            });
+        }
+    }
 
     // Initialize the api client
     const serverUrl = await serverAddress();
@@ -138,7 +138,7 @@ build: ${__JF_BUILD_VERSION__}`);
 }
 
 function loadFonts() {
-    if (browser.tv && !browser.android) {
+    if (browser.tv) {
         console.debug('using system fonts with explicit sizes');
         import('./styles/fonts.sized.scss');
     } else if (__USE_SYSTEM_FONTS__) {
@@ -227,6 +227,10 @@ async function renderApp() {
     root.render(
         <RootApp />
     );
+
+    if (window.Capacitor?.Plugins?.SplashScreen) {
+        window.Capacitor.Plugins.SplashScreen.hide();
+    }
 }
 
 init();
