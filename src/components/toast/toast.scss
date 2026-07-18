@@ -1,0 +1,74 @@
+@use '../../styles/mixins' as *;
+
+.toastContainer {
+    position: fixed;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 9999999;
+    padding-right: 1em;
+    padding-top: 1em;
+    display: flex;
+    flex-direction: column;
+
+    @include conditional-max(padding-left, 1em, env(safe-area-inset-left));
+    @include conditional-max(padding-bottom, 1em, env(safe-area-inset-bottom));
+
+    [dir="ltr"] & {
+        left: 0;
+    }
+
+    [dir="rtl"] & {
+        right: 0;
+    }
+}
+
+@keyframes toastSlideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast {
+    min-width: 20em;
+    max-width: 36em;
+    box-sizing: border-box;
+    background: rgba(10, 6, 20, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(211, 82, 255, 0.2);
+    box-shadow: inset 3px 0 0 #c26df0, 0 4px 20px rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    cursor: default;
+    transition: transform 0.3s ease-out;
+    min-height: initial;
+    padding: 1em 1.5em;
+    font-size: 110%;
+    margin: 0.25em 0;
+    margin-left: 1em;
+    pointer-events: initial;
+}
+
+.toast:first-child {
+    margin-top: 0;
+}
+
+.toast:last-child {
+    margin-bottom: 0;
+    transform: translateY(16em);
+}
+
+.toast.toastVisible {
+    transform: none;
+    animation: toastSlideIn 0.3s ease-out forwards;
+}
+
+.toast.toastHide {
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}

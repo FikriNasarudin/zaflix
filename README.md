@@ -1,92 +1,97 @@
 # Zaflix
 
-Zaflix is a React + Vite web application containerized with Docker and integrated with a GitHub Actions CI/CD pipeline.
-
-## Features
-
-- **React & Vite**: Extremely fast development server and optimized build process.
-- **Docker Support**: Preconfigured `Dockerfile` utilizing multi-stage builds (`node:20-alpine` + `nginx:alpine`) to minimize final image size.
-- **Docker Compose**: Single-command local environment startup.
-- **CI/CD Integration**: Automatic Docker builds and pushes to GitHub Container Registry (GHCR) on pushes to the `main` branch.
+A **Netflix-inspired** custom [Jellyfin Web](https://github.com/jellyfin/jellyfin-web) client with a dark purple-neon glassmorphic theme.
 
 ---
 
-## Local Development
+## What is Zaflix?
 
-### 1. Traditional Node.js
-Ensure you have Node.js installed, then run:
+Zaflix transforms the default Jellyfin experience into a visually rich, Netflix-like interface while keeping your existing Jellyfin media server as the backend. It features:
 
-```bash
-# Install dependencies
-npm install
-
-# Run dev server (will expose on host)
-npm run dev
-
-# Build for production
-npm run build
-```
-
-### 2. Run with Docker Compose
-If you have Docker Desktop installed and running, you can run the built production version of the app locally:
-
-```bash
-# Build and start the container
-docker compose up -d --build
-```
-Once started, access the application at **`http://localhost:8080`**.
+- **Hero Billboard** — Auto-rotating hero section with backdrop, logo overlays, video clips, and dot navigation
+- **Smooth Carousels** — Drag-to-scroll rows with momentum for movies, TV shows, and collections
+- **Detail Modals** — Rich overlay with cast, episodes (per-season), similar items, and collection info
+- **Video Player Overlay** — Post-play "Up Next" screen with circular countdown, keyboard shortcut hints, and glassmorphic on-screen controls
+- **Full-Text Search** — Debounced grouped results with lazy-loaded image cards
+- **Clean Lightweight Theme** — Dark glassmorphic UI with purple neon accents, smooth transitions, and loading skeletons
+- **Mobile-First** — Bottom navigation bar, touch swipe gestures, responsive layouts, and auto-rotate to landscape on playback
+- **Continue Watching** — Resume from where you left off with episode thumbnails
 
 ---
 
-## CI/CD Pipeline & GitHub Container Registry
+## Based On
 
-The repository contains a GitHub Actions workflow under `.github/workflows/docker-publish.yml`. When you push to the `main` branch, the workflow will:
-
-1. Checkout the source code.
-2. Build the production Docker image.
-3. Authenticate with the GitHub Container Registry (`ghcr.io`).
-4. Publish the built image to your repository's packages (tagged as `latest` and with the commit SHA).
-
-### Deploying to GitHub
-
-To link this local project to your GitHub repository and activate the pipeline:
-
-```bash
-# Stage and commit files
-git add .
-git commit -m "Initial commit with Docker and CI/CD workflow"
-
-# Rename local branch to main
-git branch -m main
-
-# Link your remote GitHub repository
-git remote add origin git@github.com:<YOUR_GITHUB_USERNAME>/zaflix.git
-
-# Push to GitHub
-git push -u origin main
-```
+This project is a customized fork of the **[Jellyfin Web Client](https://github.com/jellyfin/jellyfin-web)**, the official frontend for [Jellyfin](https://jellyfin.org) media server. All custom components (Billboard, MediaRow, DetailsModal, EndScreen, search, bottom nav) are built with **React** on top of the existing Jellyfin infrastructure.
 
 ---
 
-## Homelab Deployment
+## Prerequisites
 
-To deploy this application to your homelab using Docker Compose, you can pull the prebuilt image from the GitHub Container Registry (GHCR) rather than compiling the source code locally.
+- A running **Jellyfin server** (version 10.8+)
+- **Docker** (for container deployment) **or** **Node.js 20+** and **npm** (for manual development)
+- **Git** (to clone the repository)
 
-Create a `docker-compose.yml` in your homelab deployment directory:
+---
+
+## Quick Start
+
+### Option 1: Docker (mount as Jellyfin web root)
+
+```bash
+git clone https://github.com/FikriNasarudin/zaflix.git
+cd zaflix
+git checkout release
+```
+
+Then mount the directory into your Jellyfin container:
 
 ```yaml
-version: '3.8'
-
 services:
-  zaflix:
-    image: ghcr.io/fikrinasarudin/zaflix:latest
-    container_name: zaflix-web
-    ports:
-      - "8080:80"
-    restart: unless-stopped
+  jellyfin:
+    image: jellyfin/jellyfin
+    volumes:
+      - /path/to/zaflix:/jellyfin/jellyfin-web:ro
 ```
 
-Run the container:
+### Option 2: Build from source
+
 ```bash
-docker compose up -d
+git clone https://github.com/FikriNasarudin/zaflix.git
+cd zaflix
+git checkout staging
+npm install
+npm run build:production
 ```
+
+Copy the `dist/` folder to your web server or mount it into your Jellyfin container.
+
+### Option 3: Development server
+
+```bash
+git clone https://github.com/FikriNasarudin/zaflix.git
+cd zaflix
+npm install
+npm start
+```
+
+Open `http://localhost:8080` and connect to your Jellyfin server.
+
+---
+
+## Project Structure
+
+| Path | Description |
+|------|-------------|
+| `src/apps/modern/` | React-based modern app (Zaflix components) |
+| `src/apps/modern/components/` | Billboard, MediaRow, DetailsModal, EndScreen, BottomNav |
+| `src/apps/modern/hooks/` | React Query hooks for data fetching |
+| `src/apps/modern/styles/` | CSS overrides and theme constants |
+| `src/apps/modern/routes/` | Page components (home, search, video, movies, shows) |
+| `src/apps/legacy/` | Original Jellyfin Web UI (unchanged) |
+| `src/components/` | Shared components used by both modern and legacy apps |
+
+---
+
+## License
+
+This project inherits the **GNU General Public License v2.0** from the Jellyfin Web project.

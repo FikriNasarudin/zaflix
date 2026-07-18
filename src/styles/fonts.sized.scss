@@ -1,0 +1,30 @@
+@mixin header-font($size: null) {
+    font-weight: 400;
+    font-size: $size;
+}
+
+html {
+    @media all and (min-height: 720px) {
+        font-size: 105%;
+    }
+
+    @media all and (min-height: 1000px) {
+        font-size: 120%;
+    }
+}
+
+h1 {
+    @include header-font(1.8em);
+
+    .layout-desktop & {
+        font-size: 2em;
+    }
+}
+
+h2 {
+    @include header-font(1.5em);
+}
+
+h3 {
+    @include header-font(1.17em);
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Zaflix</string>
+    <string name="title_activity_main">Zaflix</string>
+    <string name="package_name">com.zaflix.app</string>
+    <string name="custom_url_scheme">com.zaflix.app</string>
+</resources>
