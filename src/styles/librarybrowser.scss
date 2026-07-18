@@ -96,10 +96,6 @@
     padding-top: 0 !important;
 }
 
-.layout-tv .itemDetailPage {
-    padding-top: 4.2em !important;
-}
-
 .standalonePage {
     padding-top: 4.5em !important;
 }
@@ -225,12 +221,6 @@
     padding-top: env(safe-area-inset-top);
 }
 
-.layout-tv .skinHeader {
-    /* In TV layout, it makes more sense to keep the top bar at the top of the page
-       Having it follow the view only makes us lose vertical space, while not being focusable */
-    position: relative;
-}
-
 .hiddenViewMenuBar .skinHeader {
     display: none;
 }
@@ -241,10 +231,6 @@
 
 .sectionTabs {
     width: 100%;
-}
-
-.layout-tv .sectionTabs {
-    width: 55%;
 }
 
 .selectedMediaFolder {
@@ -377,10 +363,6 @@
     .sectionTabs {
         font-size: 83.5%;
     }
-
-    .layout-tv .sectionTabs {
-        width: 100%;
-    }
 }
 
 @media all and (min-width: 100em) {
@@ -498,8 +480,7 @@
         right: unset;
     }
 
-    .layout-mobile &,
-    .layout-tv & {
+    .layout-mobile & {
         display: none;
     }
 
@@ -587,9 +568,6 @@
         }
     }
 
-    .layout-tv & {
-        display: none;
-    }
 }
 
 .detailSectionContent a {
@@ -767,17 +745,11 @@
         height: 7.2em;
     }
 
-    .layout-tv & {
-        display: block;
-    }
-
-    .layout-desktop [dir="rtl"] &,
-    .layout-tv [dir="rtl"] & {
+    .layout-desktop [dir="rtl"] & {
         padding-right: 32.45vw;
     }
 
-    .layout-desktop [dir="ltr"] &,
-    .layout-tv [dir="ltr"] & {
+    .layout-desktop [dir="ltr"] & {
         padding-left: 32.45vw;
     }
 }
@@ -863,20 +835,11 @@
         max-height: none;
     }
 
-    .layout-tv & {
-        left: 5%;
-        top: 0;
-        width: 25vw;
-        // match the width
-        margin-right: -25vw;
-    }
-
     [dir="rtl"] & {
         left: unset;
         float: right;
 
-        .layout-mobile &,
-        .layout-tv & {
+        .layout-mobile & {
             right: 5%;
         }
 
@@ -954,13 +917,11 @@ div.itemDetailGalleryLink.defaultCardBackground {
         height: 40vh;
     }
 
-    .layout-desktop .detailPageWrapperContainer,
-    .layout-tv .detailPageWrapperContainer {
+    .layout-desktop .detailPageWrapperContainer {
         margin-top: 0.1em;
     }
 
-    .layout-desktop .detailImageContainer .card,
-    .layout-tv .detailImageContainer .card {
+    .layout-desktop .detailImageContainer .card {
         top: 10%;
     }
 
@@ -1097,11 +1058,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
         font-size: 108%;
         margin: 1.25em 0;
     }
-
-    .layout-tv .mainDetailButtons {
-        font-size: 108%;
-        margin: 1em 0 1.25em;
-    }
 }
 
 @media all and (max-width: 50em) {
@@ -1123,10 +1079,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
 
 .detailVerticalSection .emby-scrollbuttons {
     padding-top: 0.4em;
-}
-
-.layout-tv .detailVerticalSection {
-    margin-bottom: 3.4em !important;
 }
 
 .detailPageWrapperContainer {
@@ -1153,10 +1105,6 @@ div.itemDetailGalleryLink.defaultCardBackground {
 .mediaInfoStreamType {
     display: block;
     margin: 0.622em 0; /* copy button height compensation */
-}
-
-.layout-tv .mediaInfoStreamType {
-    margin: 1em 0;
 }
 
 .mediaInfoAttribute,
@@ -1349,16 +1297,6 @@ div:not(.sectionTitleContainer-cards) > .sectionTitle-cards {
 
 .padded-bottom {
     padding-bottom: 1em;
-}
-
-.layout-tv .padded-top-focusscale {
-    padding-top: 1.5em;
-    margin-top: -1.5em;
-}
-
-.layout-tv .padded-bottom-focusscale {
-    padding-bottom: 1.5em;
-    margin-bottom: -1.5em;
 }
 
 @media all and (min-height: 31.25em) {

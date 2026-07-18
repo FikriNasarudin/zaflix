@@ -1,21 +1,27 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { useApi } from 'hooks/useApi';
 import { useToggleFavoriteMutation } from 'hooks/useFetchItems';
 import { playbackManager } from 'components/playback/playbackmanager';
 import Events from 'utils/events';
 import datetime from 'scripts/datetime';
+import { hapticMedium } from '../../../../utils/haptics';
 
 import CloseIcon from '@mui/icons-material/Close';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import MovieIcon from '@mui/icons-material/Movie';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+
+import MaturityBadge from '../MaturityBadge/MaturityBadge';
 
 import { useCollectionItems } from '../../hooks/useCollectionItems';
 import { useEpisodes } from '../../hooks/useEpisodes';
 import { useItem } from '../../hooks/useItem';
-import { useItemCollections } from '../../hooks/useItemCollections';
+import { useItemBoxSets } from '../../hooks/useItemBoxSets';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useSeasons } from '../../hooks/useSeasons';
 import { useSimilarItems } from '../../hooks/useSimilarItems';
@@ -29,6 +35,7 @@ interface DetailsModalProps {
 const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const { __legacyApiClient__: apiClient, user } = useApi();
     const { isMobile, isTablet } = useMediaQuery();
+    const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
 
     const isSeries = item.Type === 'Series';
     const isBoxSet = item.Type === 'BoxSet';
@@ -39,13 +46,28 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
     const { data: fullItem } = useItem(item.Id);
     const detailItem = fullItem || item;
     const { data: similarItems = [], isPending: isSimilarPending } = useSimilarItems(item.Id);
-    const { data: parentCollections = [], isPending: isCollectionsPending } = useItemCollections(isBoxSet ? undefined : item.Id);
-    const parentCollectionId = isBoxSet ? item.Id : (parentCollections[0]?.Id || undefined);
-    const { data: collectionItems = [], isPending: isBoxSetPending } = useCollectionItems(parentCollectionId);
+    const { data: itemBoxSets = [], isPending: isBoxSetsPending } = useItemBoxSets(isBoxSet ? undefined : item.Id);
+    const firstBoxSetId = isBoxSet ? item.Id : (itemBoxSets[0]?.Id || detailItem.CollectionIds?.[0] || undefined);
+    const { data: collectionItems = [], isPending: isBoxSetPending } = useCollectionItems(firstBoxSetId);
 
     const [adminMenuAnchor, setAdminMenuAnchor] = useState<boolean>(false);
     const [isFavorite, setIsFavorite] = useState<boolean>(item.UserData?.IsFavorite || false);
     const toggleFavoriteMutation = useToggleFavoriteMutation();
+
+    const [selectedAudioIndex, setSelectedAudioIndex] = useState<number>(-1);
+    const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState<number>(-1);
+
+    const formatStreamLabel = (stream: any): string => {
+        const lang = stream.LocalizedLanguage || stream.Language || '';
+        if (stream.Type === 'Audio') {
+            const layout = stream.ChannelLayout || stream.Codec || '';
+            const profile = stream.Profile && stream.Profile !== 'Unknown' ? ` (${stream.Profile})` : '';
+            return [lang, layout].filter(Boolean).join(' - ') + profile || stream.DisplayTitle || stream.Title || 'Unknown';
+        }
+        const codec = stream.Codec ? stream.Codec.toUpperCase() : (stream.DisplayTitle || stream.Title || '');
+        const suffix = stream.IsExternal ? ' (External)' : (stream.IsForced ? ' (Forced)' : '');
+        return [lang, codec].filter(Boolean).join(' - ') + suffix || 'Unknown';
+    };
 
     // Set initial selected season when seasons load
     useEffect(() => {
@@ -54,10 +76,33 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
         }
     }, [seasons, selectedSeasonId]);
 
+    // Set initial audio/subtitle selections from defaults
+    useEffect(() => {
+        if (!detailItem.MediaStreams) return;
+        const audioStreams = detailItem.MediaStreams.filter((s: any) => s.Type === 'Audio');
+        const subtitleStreams = detailItem.MediaStreams.filter((s: any) => s.Type === 'Subtitle');
+        const defaultAudio = audioStreams.find((s: any) => s.IsDefault) || audioStreams[0];
+        const defaultSub = subtitleStreams.find((s: any) => s.IsDefault);
+        if (defaultAudio && selectedAudioIndex === -1) {
+            setSelectedAudioIndex(defaultAudio.Index);
+        }
+        if (defaultSub && selectedSubtitleIndex === -1) {
+            setSelectedSubtitleIndex(defaultSub.Index);
+        }
+    }, [detailItem.MediaStreams, selectedAudioIndex, selectedSubtitleIndex]);
+
+    // Lock body scroll while modal is open
+    useEffect(() => {
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, []);
+
     const handleToggleFavorite = () => {
         if (!user || !user.Id) return;
         const newFav = !isFavorite;
         setIsFavorite(newFav);
+        hapticMedium();
         toggleFavoriteMutation.mutate(
             { itemId: item.Id, isFavorite: newFav },
             { onError: () => setIsFavorite(!newFav) }
@@ -87,7 +132,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
         fontWeight: 700
     };
 
-    return (
+    return createPortal(
         <div style={{
             position: 'fixed',
             top: 0,
@@ -111,6 +156,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                 borderRadius: ZAFlix.radii.modal,
                 border: `1px solid ${ZAFlix.colors.border}`,
                 overflowY: 'auto',
+                overflowX: 'hidden',
                 boxShadow: ZAFlix.shadows.modal,
                 display: 'flex',
                 flexDirection: 'column',
@@ -176,7 +222,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                         alignItems: 'center'
                     }}>
                         <button
-                            onClick={() => handlePlay()}
+                            onClick={() => {
+                                hapticMedium();
+                                handlePlay();
+                            }}
                             style={{
                                 padding: '8px 24px',
                                 fontSize: '1rem',
@@ -194,6 +243,35 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                         >
                             <PlayArrowIcon /> Play
                         </button>
+
+                        {(item.Type === 'Movie' || item.Type === 'Series') && (
+                            <button
+                                onClick={() => {
+                                    playbackManager.playTrailers(item);
+                                    onClose();
+                                }}
+                                style={{
+                                    padding: '8px 16px',
+                                    fontSize: '0.9rem',
+                                    fontWeight: 'bold',
+                                    borderRadius: ZAFlix.radii.button,
+                                    border: `1px solid ${ZAFlix.colors.borderHover}`,
+                                    background: 'rgba(10, 6, 20, 0.75)',
+                                    color: ZAFlix.colors.textPrimary,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    height: '38px',
+                                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                                    transition: 'transform 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                <MovieIcon /> Trailer
+                            </button>
+                        )}
 
                         <button
                             onClick={handleToggleFavorite}
@@ -334,7 +412,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                 </div>
 
                 {/* Detail Information */}
-                <div style={{ padding: '25px', color: ZAFlix.colors.textPrimary, display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
+                <div style={{ padding: '25px 25px 35px 25px', color: ZAFlix.colors.textPrimary, display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
                     <div style={{ display: 'flex', gap: '25px', flexDirection: isMobile ? 'column' : 'row' }}>
                         {!isMobile && (
                             <div style={{
@@ -368,7 +446,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                         maxWidth: '90%',
                                         objectFit: 'contain',
                                         alignSelf: 'flex-start',
-                                        marginBottom: '5px'
+                                        marginBottom: '12px'
                                     }}
                                     alt={item.Name}
                                 />
@@ -384,17 +462,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                     </span>
                                 )}
                                 {detailItem.OfficialRating && (
-                                    <span style={{
-                                        padding: '2px 8px',
-                                        background: 'rgba(211, 82, 255, 0.15)',
-                                        border: `1px solid ${ZAFlix.colors.border}`,
-                                        borderRadius: '4px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 700,
-                                        color: ZAFlix.colors.accentLight
-                                    }}>
-                                        {detailItem.OfficialRating}
-                                    </span>
+                                    <MaturityBadge rating={detailItem.OfficialRating} />
                                 )}
                                 {detailItem.CommunityRating && (
                                     <span style={{ color: ZAFlix.colors.cyan, fontWeight: 'bold' }}>
@@ -426,9 +494,241 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 </div>
                             )}
 
-                            <p style={{ fontSize: '1rem', lineHeight: '1.5', color: ZAFlix.colors.textSecondary, margin: 0 }}>{item.Overview}</p>
+                            <div>
+                                <p style={{
+                                    fontSize: '1rem',
+                                    lineHeight: '1.5',
+                                    color: ZAFlix.colors.textSecondary,
+                                    margin: 0,
+                                    ...(isOverviewExpanded ? {} : {
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 3,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden'
+                                    })
+                                }}>
+                                    {item.Overview}
+                                </p>
+                                {item.Overview && item.Overview.length > 150 && (
+                                    <button
+                                        onClick={() => setIsOverviewExpanded(!isOverviewExpanded)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: ZAFlix.colors.accent,
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            padding: '4px 0',
+                                            marginTop: '4px'
+                                        }}
+                                    >
+                                        {isOverviewExpanded ? 'Show less' : 'Read more'}
+                                    </button>
+                                )}
+                            </div>
+                            </div>
                         </div>
-                    </div>
+
+                        {/* Content Warnings */}
+                        {detailItem.OfficialRating && ['R', 'NC-17', 'TV-MA'].includes(detailItem.OfficialRating) && (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '10px 14px',
+                                background: 'rgba(244, 67, 54, 0.08)',
+                                border: '1px solid rgba(244, 67, 54, 0.25)',
+                                borderRadius: ZAFlix.radii.button,
+                                fontSize: '0.85rem',
+                                color: '#e57373'
+                            }}>
+                                <WarningAmberIcon style={{ fontSize: '1.2rem', flexShrink: 0 }} />
+                                <span>This content is rated <strong>{detailItem.OfficialRating}</strong> and may not be suitable for all audiences.</span>
+                            </div>
+                        )}
+
+                        {/* Cast & Crew Grid */}
+                        {detailItem.People && detailItem.People.length > 0 && (
+                            <div>
+                                <h3 style={sectionTitleStyle}>Cast & Crew</h3>
+                                <div className='zaflix-hide-scrollbar' style={{
+                                    display: 'flex',
+                                    gap: isMobile ? '12px' : '18px',
+                                    overflowX: 'auto',
+                                    padding: '6px 12px 6px 8px',
+                                    WebkitOverflowScrolling: 'touch',
+                                    scrollSnapType: 'x proximity',
+                                    touchAction: 'pan-y'
+                                }}>
+                                    {detailItem.People.slice(0, 12).map((person: any) => {
+                                        const personImageUrl = apiClient
+                                            ? apiClient.getUrl(`Items/${person.Id}/Images/Primary?quality=80&width=120${person.PrimaryImageTag ? `&tag=${person.PrimaryImageTag}` : ''}`)
+                                            : '';
+                                        return (
+                                            <div key={person.Id || person.Name} style={{
+                                                flex: '0 0 auto',
+                                                width: isMobile ? '80px' : '100px',
+                                                textAlign: 'center',
+                                                scrollSnapAlign: 'start'
+                                            }}>
+                                                <div style={{
+                                                    width: isMobile ? '70px' : '90px',
+                                                    height: isMobile ? '70px' : '90px',
+                                                    borderRadius: '50%',
+                                                    overflow: 'hidden',
+                                                    border: `2px solid ${ZAFlix.colors.border}`,
+                                                    background: ZAFlix.colors.card,
+                                                    margin: '0 auto 8px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    {personImageUrl ? (
+                                                        <img
+                                                            src={personImageUrl}
+                                                            alt={person.Name || ''}
+                                                            loading='lazy'
+                                                            className='zaflix-image-fade-in'
+                                                            onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <span style={{
+                                                            fontSize: '1.5rem',
+                                                            fontWeight: 700,
+                                                            color: ZAFlix.colors.accent
+                                                        }}>
+                                                            {person.Name?.[0]?.toUpperCase() || '?'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 600,
+                                                    color: ZAFlix.colors.textPrimary,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {person.Name}
+                                                </div>
+                                                <div style={{
+                                                    fontSize: '0.7rem',
+                                                    color: ZAFlix.colors.textSecondary,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                    marginTop: '2px'
+                                                }}>
+                                                    {person.Role || person.Type}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Audio & Subtitle Selectors */}
+                        {detailItem.MediaStreams && detailItem.MediaStreams.length > 0 && (() => {
+                            const audioStreams = detailItem.MediaStreams.filter((s: any) => s.Type === 'Audio');
+                            const subtitleStreams = detailItem.MediaStreams.filter((s: any) => s.Type === 'Subtitle');
+                            if (audioStreams.length === 0 && subtitleStreams.length === 0) return null;
+                            return (
+                                <div style={{
+                                    display: 'flex',
+                                    gap: '15px',
+                                    flexWrap: 'wrap'
+                                }}>
+                                    {audioStreams.length > 1 && (
+                                        <div style={{
+                                            flex: '1 1 200px',
+                                            background: 'rgba(20, 13, 39, 0.4)',
+                                            border: `1px solid ${ZAFlix.colors.borderSubtle}`,
+                                            borderRadius: ZAFlix.radii.button,
+                                            padding: '10px 14px'
+                                        }}>
+                                            <label style={{
+                                                fontSize: '0.75rem',
+                                                color: ZAFlix.colors.textSecondary,
+                                                opacity: 0.7,
+                                                display: 'block',
+                                                marginBottom: '6px'
+                                            }}>Audio</label>
+                                            <select
+                                                value={selectedAudioIndex}
+                                                onChange={(e) => {
+                                                    const idx = Number(e.target.value);
+                                                    setSelectedAudioIndex(idx);
+                                                    playbackManager.setAudioStreamIndex(idx);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    background: ZAFlix.colors.card,
+                                                    color: ZAFlix.colors.textPrimary,
+                                                    border: `1px solid ${ZAFlix.colors.borderHover}`,
+                                                    padding: '6px 10px',
+                                                    borderRadius: ZAFlix.radii.button,
+                                                    fontSize: '0.85rem',
+                                                    outline: 'none',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                {audioStreams.map((s: any) => (
+                                                    <option key={s.Index} value={s.Index}>{formatStreamLabel(s)}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                    {subtitleStreams.length > 0 && (
+                                        <div style={{
+                                            flex: '1 1 200px',
+                                            background: 'rgba(20, 13, 39, 0.4)',
+                                            border: `1px solid ${ZAFlix.colors.borderSubtle}`,
+                                            borderRadius: ZAFlix.radii.button,
+                                            padding: '10px 14px'
+                                        }}>
+                                            <label style={{
+                                                fontSize: '0.75rem',
+                                                color: ZAFlix.colors.textSecondary,
+                                                opacity: 0.7,
+                                                display: 'block',
+                                                marginBottom: '6px'
+                                            }}>Subtitles</label>
+                                            <select
+                                                value={selectedSubtitleIndex}
+                                                onChange={(e) => {
+                                                    const idx = Number(e.target.value);
+                                                    setSelectedSubtitleIndex(idx);
+                                                    playbackManager.setSubtitleStreamIndex(idx);
+                                                }}
+                                                style={{
+                                                    width: '100%',
+                                                    background: ZAFlix.colors.card,
+                                                    color: ZAFlix.colors.textPrimary,
+                                                    border: `1px solid ${ZAFlix.colors.borderHover}`,
+                                                    padding: '6px 10px',
+                                                    borderRadius: ZAFlix.radii.button,
+                                                    fontSize: '0.85rem',
+                                                    outline: 'none',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <option value={-1}>Off</option>
+                                                {subtitleStreams.map((s: any) => (
+                                                    <option key={s.Index} value={s.Index}>{formatStreamLabel(s)}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                     {/* TV Show Episodes Section */}
                     {item.Type === 'Series' && (isSeasonsPending || isEpisodesPending ? (
@@ -604,8 +904,8 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 {collectionItems.map((colItem: any) => {
                                     const imageTag = colItem.BackdropImageTags?.[0] || colItem.ImageTags?.Thumb || colItem.ImageTags?.Primary;
                                     const imageType = colItem.BackdropImageTags?.[0] ? 'Backdrop' : (colItem.ImageTags?.Thumb ? 'Thumb' : 'Primary');
-                                    const colItemLandscape = apiClient
-                                        ? apiClient.getUrl(`Items/${colItem.Id}/Images/${imageType}/0?quality=80${imageTag ? `&tag=${imageTag}` : ''}`)
+                                    const colItemLandscape = apiClient && imageTag
+                                        ? apiClient.getUrl(`Items/${colItem.Id}/Images/${imageType}/0?quality=80&tag=${imageTag}`)
                                         : '';
                                     return (
                                         <div
@@ -630,12 +930,46 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                                 paddingTop: '56.25%',
                                                 borderRadius: ZAFlix.radii.card,
                                                 overflow: 'hidden',
-                                                border: '1px solid rgba(211, 82, 255, 0.15)',
-                                                backgroundImage: `url(${colItemLandscape})`,
-                                                backgroundSize: 'cover',
-                                                backgroundPosition: 'center',
+                                                border: colItemLandscape ? '1px solid rgba(211, 82, 255, 0.15)' : '1px dashed rgba(211, 82, 255, 0.3)',
+                                                background: colItemLandscape ? 'none' : 'linear-gradient(135deg, #140d27 0%, #1a1035 100%)',
                                                 backgroundColor: ZAFlix.colors.card
-                                            }} />
+                                            }}>
+                                                {colItemLandscape ? (
+                                                    <img
+                                                        src={colItemLandscape}
+                                                        alt={colItem.Name || ''}
+                                                        loading='lazy'
+                                                        className='zaflix-image-fade-in'
+                                                        onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover'
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '4px'
+                                                    }}>
+                                                        <MovieIcon style={{ fontSize: '1.5rem', color: ZAFlix.colors.accent, opacity: 0.4 }} />
+                                                        <span style={{ fontSize: '0.65rem', color: ZAFlix.colors.textSecondary, opacity: 0.5, textAlign: 'center', padding: '0 6px' }}>
+                                                            {colItem.Name}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
                                             <div style={{
                                                 marginTop: '6px',
                                                 fontSize: '0.8rem',
@@ -654,10 +988,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                         </div>
                     ))}
 
-                    {/* Movie Collection Details [Image 4] */}
-                    {item.Type === 'Movie' && parentCollections.length > 0 && (isBoxSetPending ? (
+                    {/* Part of Collection — shows other movies in the same BoxSet */}
+                    {item.Type === 'Movie' && ((isBoxSetsPending || isBoxSetPending) ? (
                         <div style={{ marginTop: '20px' }}>
-                            <h3 style={sectionTitleStyle}>Collection: {parentCollections[0].Name}</h3>
+                            <h3 style={sectionTitleStyle}>Part of a Collection</h3>
                             <div className='zaflix-hide-scrollbar' style={{
                                 display: 'flex',
                                 gap: '12px',
@@ -679,9 +1013,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 ))}
                             </div>
                         </div>
-                    ) : collectionItems.length > 0 && (
+                    ) : collectionItems.length > 1 && (
                         <div style={{ marginTop: '20px' }}>
-                            <h3 style={sectionTitleStyle}>Collection: {parentCollections[0].Name}</h3>
+                            <h3 style={sectionTitleStyle}>Part of {itemBoxSets[0]?.Name || 'Collection'}</h3>
                             <div className='zaflix-hide-scrollbar' style={{
                                 display: 'flex',
                                 gap: '12px',
@@ -691,76 +1025,112 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                 scrollSnapType: 'x proximity',
                                 touchAction: 'pan-y'
                             }}>
-                                {collectionItems.map((colItem: any) => {
-                                    const imageTag = colItem.BackdropImageTags?.[0] || colItem.ImageTags?.Thumb || colItem.ImageTags?.Primary;
-                                    const imageType = colItem.BackdropImageTags?.[0] ? 'Backdrop' : (colItem.ImageTags?.Thumb ? 'Thumb' : 'Primary');
-                                    const colItemLandscape = apiClient
-                                        ? apiClient.getUrl(`Items/${colItem.Id}/Images/${imageType}/0?quality=80${imageTag ? `&tag=${imageTag}` : ''}`)
-                                        : '';
-                                    return (
-                                        <div
-                                            key={colItem.Id}
-                                            onClick={() => Events.trigger(document, 'open-zaflix-details', [colItem])}
-                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Events.trigger(document, 'open-zaflix-details', [colItem]); } }}
-                                            role='button'
-                                            tabIndex={0}
-                                            className='zaflix-focus-visible will-change-transform'
-                                            style={{
-                                                flex: '0 0 auto',
-                                                width: '180px',
-                                                cursor: 'pointer',
-                                                scrollSnapAlign: 'start',
-                                                transition: 'transform 0.2s ease'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                        >
-                                            <div style={{
-                                                position: 'relative',
-                                                paddingTop: '56.25%',
-                                                borderRadius: ZAFlix.radii.card,
-                                                overflow: 'hidden',
-                                                border: '1px solid rgba(211, 82, 255, 0.15)',
-                                                backgroundImage: `url(${colItemLandscape})`,
-                                                backgroundSize: 'cover',
-                                                backgroundPosition: 'center',
-                                                backgroundColor: ZAFlix.colors.card
-                                            }} />
-                                            <div style={{
-                                                marginTop: '6px',
-                                                fontSize: '0.8rem',
-                                                fontWeight: 'bold',
-                                                textAlign: 'left',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap'
-                                            }}>
-                                                {colItem.Name}
+                                {collectionItems
+                                    .filter((colItem: any) => colItem.Id !== item.Id)
+                                    .map((colItem: any) => {
+                                        const imageTag = colItem.BackdropImageTags?.[0] || colItem.ImageTags?.Thumb || colItem.ImageTags?.Primary;
+                                        const imageType = colItem.BackdropImageTags?.[0] ? 'Backdrop' : (colItem.ImageTags?.Thumb ? 'Thumb' : 'Primary');
+                                        const colItemLandscape = apiClient && imageTag
+                                            ? apiClient.getUrl(`Items/${colItem.Id}/Images/${imageType}/0?quality=80&tag=${imageTag}`)
+                                            : '';
+                                        return (
+                                            <div
+                                                key={colItem.Id}
+                                                onClick={() => Events.trigger(document, 'open-zaflix-details', [colItem])}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Events.trigger(document, 'open-zaflix-details', [colItem]); } }}
+                                                role='button'
+                                                tabIndex={0}
+                                                className='zaflix-focus-visible will-change-transform'
+                                                style={{
+                                                    flex: '0 0 auto',
+                                                    width: '180px',
+                                                    cursor: 'pointer',
+                                                    scrollSnapAlign: 'start',
+                                                    transition: 'transform 0.2s ease'
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                            >
+                                                <div style={{
+                                                    position: 'relative',
+                                                    paddingTop: '56.25%',
+                                                    borderRadius: ZAFlix.radii.card,
+                                                    overflow: 'hidden',
+                                                    border: colItemLandscape ? '1px solid rgba(211, 82, 255, 0.15)' : '1px dashed rgba(211, 82, 255, 0.3)',
+                                                    background: colItemLandscape ? 'none' : 'linear-gradient(135deg, #140d27 0%, #1a1035 100%)',
+                                                    backgroundColor: ZAFlix.colors.card
+                                                }}>
+                                                    {colItemLandscape ? (
+                                                        <img
+                                                            src={colItemLandscape}
+                                                            alt={colItem.Name || ''}
+                                                            loading='lazy'
+                                                            className='zaflix-image-fade-in'
+                                                            onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '4px'
+                                                        }}>
+                                                            <MovieIcon style={{ fontSize: '1.5rem', color: ZAFlix.colors.accent, opacity: 0.4 }} />
+                                                            <span style={{ fontSize: '0.65rem', color: ZAFlix.colors.textSecondary, opacity: 0.5, textAlign: 'center', padding: '0 6px' }}>
+                                                                {colItem.Name}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{
+                                                    marginTop: '6px',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 'bold',
+                                                    textAlign: 'left',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {colItem.Name}
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
                             </div>
                         </div>
                     ))}
 
-                    {/* More Like This recommended section in landscape grid */}
+                    {/* More Like This recommended section — portrait poster grid */}
                     {isSimilarPending ? (
                         <div style={{ marginTop: '25px' }}>
                             <h3 style={sectionTitleStyle}>More Like This</h3>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                                gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
                                 gap: '15px'
                             }}>
                                 {[1, 2, 3, 4].map(i => (
                                     <div key={i}>
                                         <div className='skeleton-card' style={{
                                             width: '100%',
-                                            paddingTop: '56.25%',
+                                            paddingTop: '150%',
                                             borderRadius: ZAFlix.radii.card
                                         }} />
-                                        <div className='skeleton-card' style={{ width: '70%', height: 13, borderRadius: 4, marginTop: 6 }} />
+                                        <div className='skeleton-card' style={{ width: '80%', height: 13, borderRadius: 4, marginTop: 6 }} />
                                     </div>
                                 ))}
                             </div>
@@ -770,14 +1140,13 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                             <h3 style={sectionTitleStyle}>More Like This</h3>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                                gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
                                 gap: '15px'
                             }}>
                                 {similarItems.map((similarItem) => {
-                                    const imageTag = similarItem.BackdropImageTags?.[0] || similarItem.ImageTags?.Thumb || similarItem.ImageTags?.Primary;
-                                    const imageType = similarItem.BackdropImageTags?.[0] ? 'Backdrop' : (similarItem.ImageTags?.Thumb ? 'Thumb' : 'Primary');
+                                    const posterTag = similarItem.ImageTags?.Primary;
                                     const similarPoster = apiClient
-                                        ? apiClient.getUrl(`Items/${similarItem.Id}/Images/${imageType}/0?quality=80${imageTag ? `&tag=${imageTag}` : ''}`)
+                                        ? apiClient.getUrl(`Items/${similarItem.Id}/Images/Primary?quality=85${posterTag ? `&tag=${posterTag}` : ''}`)
                                         : '';
                                     return (
                                         <div
@@ -787,21 +1156,36 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                                             role='button'
                                             tabIndex={0}
                                             className='zaflix-focus-visible will-change-transform'
-                                            style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
+                                            style={{ cursor: 'pointer', transition: 'transform 0.2s ease', minWidth: 0, overflow: 'hidden', borderRadius: ZAFlix.radii.card }}
                                             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                                         >
                                             <div style={{
                                                 position: 'relative',
-                                                paddingTop: '56.25%',
+                                                paddingTop: '150%',
                                                 borderRadius: ZAFlix.radii.card,
                                                 overflow: 'hidden',
                                                 border: '1px solid rgba(211, 82, 255, 0.15)',
-                                                backgroundImage: `url(${similarPoster})`,
-                                                backgroundSize: 'cover',
-                                                backgroundPosition: 'center',
                                                 backgroundColor: ZAFlix.colors.card
-                                            }} />
+                                            }}>
+                                                {similarPoster ? (
+                                                    <img
+                                                        src={similarPoster}
+                                                        alt={similarItem.Name}
+                                                        loading='lazy'
+                                                        className='zaflix-image-fade-in'
+                                                        onLoad={(e) => e.currentTarget.classList.add('loaded')}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover'
+                                                        }}
+                                                    />
+                                                ) : null}
+                                            </div>
                                             <div style={{
                                                 marginTop: '6px',
                                                 fontSize: '0.8rem',
@@ -821,7 +1205,8 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ item, onClose }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

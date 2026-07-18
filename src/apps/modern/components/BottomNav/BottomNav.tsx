@@ -6,6 +6,7 @@ import TvIcon from '@mui/icons-material/Tv';
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import { hapticLight } from '../../../../utils/haptics';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { ZAFlix } from '../../styles/theme';
 
@@ -26,20 +27,20 @@ const NAV_ITEMS: NavItem[] = [
     {
         label: 'Movies',
         icon: <MovieIcon />,
-        path: '/movies',
-        matchFn: (p) => p.startsWith('/movies') || p.startsWith('/list') && p.includes('collectionType=movies')
+        path: '/home?tab=1',
+        matchFn: (p) => p.includes('tab=1')
     },
     {
         label: 'TV Shows',
         icon: <TvIcon />,
-        path: '/tv',
-        matchFn: (p) => p.startsWith('/tv') || p.startsWith('/list') && p.includes('collectionType=tvshows')
+        path: '/home?tab=2',
+        matchFn: (p) => p.includes('tab=2')
     },
     {
         label: 'My List',
         icon: <FavoriteBorderIcon />,
-        path: '/home?tab=1',
-        matchFn: (p) => p.includes('tab=1')
+        path: '/home?tab=4',
+        matchFn: (p) => p.includes('tab=4')
     },
     {
         label: 'Search',
@@ -82,7 +83,10 @@ const BottomNav: React.FC = () => {
                 return (
                     <button
                         key={item.label}
-                        onClick={() => navigate(item.path)}
+                        onClick={() => {
+                            hapticLight();
+                            navigate(item.path);
+                        }}
                         aria-label={item.label}
                         style={{
                             display: 'flex',

@@ -14,6 +14,7 @@ import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { useBillboardItems } from '../../hooks/useBillboardItems';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useSwipe } from '../../hooks/useSwipe';
+import { useAmbientColor } from '../../hooks/useAmbientColor';
 import { ZAFlix } from '../../styles/theme';
 
 interface BillboardProps {
@@ -27,6 +28,11 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [playClip, setPlayClip] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
+
+    const backdropUrl = apiClient && items[currentIndex]
+        ? apiClient.getUrl(`Items/${items[currentIndex].Id}/Images/Backdrop/0?quality=90`)
+        : '';
+    const ambientColor = useAmbientColor(backdropUrl);
 
     const swipeHandlers = useSwipe({
         onSwipeLeft: () => setCurrentIndex((prev) => (prev + 1) % items.length),
@@ -103,7 +109,6 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
     if (!items || items.length === 0) return null;
 
     const currentItem = items[currentIndex];
-    const backdropUrl = apiClient ? apiClient.getUrl(`Items/${currentItem.Id}/Images/Backdrop/0?quality=90`) : '';
 
     const streamUrl = apiClient
         ? apiClient.getUrl(`Videos/${currentItem.Id}/stream?static=false&VideoCodec=h264&AudioCodec=aac&Container=mp4&maxWidth=1280&maxHeight=720&VideoBitrate=1200000&api_key=${apiClient.accessToken()}`)
@@ -148,7 +153,8 @@ const Billboard: React.FC<BillboardProps> = ({ filterType = 'all' }) => {
                 overflow: 'hidden',
                 marginBottom: '20px',
                 background: ZAFlix.colors.card,
-                transition: 'height 0.3s ease',
+                boxShadow: `0 0 80px 20px ${ambientColor}`,
+                transition: 'height 0.3s ease, box-shadow 1.5s ease',
                 outline: 'none'
             }}
         >

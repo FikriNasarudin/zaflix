@@ -129,32 +129,30 @@ export async function getCommands(options) {
         });
     }
 
-    if (!browser.tv) {
-        // Multiselect is currrently only ran on long clicks of card components
-        // This disables Select on any context menu not originating from a card i.e songs
-        if (options.positionTo && (dom.parentWithClass(options.positionTo, 'card') !== null)) {
-            commands.push({
-                name:  globalize.translate('Select'),
-                id: 'multiSelect',
-                icon: 'library_add_check'
-            });
-        }
+    // Multiselect is currrently only ran on long clicks of card components
+    // This disables Select on any context menu not originating from a card i.e songs
+    if (options.positionTo && (dom.parentWithClass(options.positionTo, 'card') !== null)) {
+        commands.push({
+            name:  globalize.translate('Select'),
+            id: 'multiSelect',
+            icon: 'library_add_check'
+        });
+    }
 
-        if (itemHelper.supportsAddingToCollection(item) && (user.Policy.IsAdministrator || user.Policy.EnableCollectionManagement)) {
-            commands.push({
-                name: globalize.translate('AddToCollection'),
-                id: 'addtocollection',
-                icon: 'playlist_add'
-            });
-        }
+    if (itemHelper.supportsAddingToCollection(item) && (user.Policy.IsAdministrator || user.Policy.EnableCollectionManagement)) {
+        commands.push({
+            name: globalize.translate('AddToCollection'),
+            id: 'addtocollection',
+            icon: 'playlist_add'
+        });
+    }
 
-        if (itemHelper.supportsAddingToPlaylist(item) && options.playlist !== false) {
-            commands.push({
-                name: globalize.translate('AddToPlaylist'),
-                id: 'addtoplaylist',
-                icon: 'playlist_add'
-            });
-        }
+    if (itemHelper.supportsAddingToPlaylist(item) && options.playlist !== false) {
+        commands.push({
+            name: globalize.translate('AddToPlaylist'),
+            id: 'addtoplaylist',
+            icon: 'playlist_add'
+        });
     }
 
     if ((item.Type === 'Timer') && user.Policy.EnableLiveTvManagement && options.cancelTimer !== false) {
@@ -338,7 +336,7 @@ export async function getCommands(options) {
         });
     }
 
-    if (!browser.tv && options.share === true && itemHelper.canShare(item, user)) {
+    if (options.share === true && itemHelper.canShare(item, user)) {
         commands.push({
             name: globalize.translate('Share'),
             id: 'share',

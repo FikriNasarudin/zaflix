@@ -14,11 +14,6 @@ import '../../styles/scrollstyles.scss';
 let globalOnOpenCallback;
 
 function enableAnimation() {
-    // too slow
-    if (browser.tv) {
-        return false;
-    }
-
     return browser.supportsCssAnimation();
 }
 

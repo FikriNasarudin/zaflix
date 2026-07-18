@@ -52,7 +52,7 @@ function getDeviceProfile(item) {
     return new Promise(function (resolve) {
         let profile;
 
-        if (window.NativeShell) {
+        if (window.NativeShell?.AppHost) {
             profile = window.NativeShell.AppHost.getDeviceProfile(profileBuilder, __PACKAGE_JSON_VERSION__);
         } else {
             const builderOpts = getBaseProfileOptions(item);
@@ -174,10 +174,6 @@ function getDeviceName() {
 }
 
 function supportsFullscreen() {
-    if (browser.tv) {
-        return false;
-    }
-
     const element = document.documentElement;
     return !!(element.requestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen || element.msRequestFullscreen || document.createElement('video').webkitEnterFullscreen);
 }
@@ -234,7 +230,7 @@ const supportedFeatures = function () {
         features.push(AppFeature.Sharing);
     }
 
-    if (!browser.edgeUwp && !browser.tv && !browser.xboxOne && !browser.ps4) {
+    if (!browser.edgeUwp && !browser.xboxOne && !browser.ps4) {
         features.push(AppFeature.FileDownload);
     }
 
@@ -259,7 +255,7 @@ const supportedFeatures = function () {
         features.push(AppFeature.PhysicalVolumeControl);
     }
 
-    if (!browser.tv && !browser.xboxOne && !browser.ps4) {
+    if (!browser.xboxOne && !browser.ps4) {
         features.push(AppFeature.RemoteControl);
     }
 
@@ -284,7 +280,7 @@ const supportedFeatures = function () {
         features.push(AppFeature.SubtitleBurnIn);
     }
 
-    if (!browser.tv && !browser.ps4 && !browser.xboxOne) {
+    if (!browser.ps4 && !browser.xboxOne) {
         features.push(AppFeature.FileInput);
     }
 
@@ -359,7 +355,7 @@ export const appHost = {
         }
     },
     supports: function (command) {
-        if (window.NativeShell) {
+        if (window.NativeShell?.AppHost) {
             return window.NativeShell.AppHost.supports(command);
         }
 
@@ -367,7 +363,7 @@ export const appHost = {
     },
     preferVisualCards: browser.android || browser.chrome,
     getDefaultLayout: function () {
-        if (window.NativeShell) {
+        if (window.NativeShell?.AppHost) {
             return window.NativeShell.AppHost.getDefaultLayout();
         }
 
@@ -375,7 +371,7 @@ export const appHost = {
     },
     getDeviceProfile,
     init: function () {
-        if (window.NativeShell) {
+        if (window.NativeShell?.AppHost) {
             return window.NativeShell.AppHost.init();
         }
 
@@ -404,10 +400,8 @@ export const appHost = {
         return {};
     },
     setUserScalable: function (scalable) {
-        if (!browser.tv) {
-            const att = scalable ? 'width=device-width, initial-scale=1, minimum-scale=1, user-scalable=yes' : 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no';
-            document.querySelector('meta[name=viewport]').setAttribute('content', att);
-        }
+        const att = scalable ? 'width=device-width, initial-scale=1, minimum-scale=1, user-scalable=yes' : 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no';
+        document.querySelector('meta[name=viewport]').setAttribute('content', att);
     },
     screen: () => {
         let hostScreen = null;
@@ -416,7 +410,7 @@ export const appHost = {
 
         if (appHostImpl?.screen) {
             hostScreen = appHostImpl.screen();
-        } else if (window.screen && !browser.tv) {
+        } else if (window.screen) {
             hostScreen = {
                 width: Math.floor(window.screen.width * window.devicePixelRatio),
                 height: Math.floor(window.screen.height * window.devicePixelRatio)

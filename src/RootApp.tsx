@@ -11,8 +11,7 @@ import { persister, queryClient } from 'utils/query/queryClient';
 
 import RootAppRouter from 'RootAppRouter';
 
-const useReactQueryDevtools = window.Proxy // '@tanstack/query-devtools' requires 'Proxy', which cannot be polyfilled for legacy browsers
-    && !browser.tv; // Don't use devtools on the TV as the navigation is weird
+const useReactQueryDevtools = false; // Disabled: query-devtools conflicts with Jellyfin's webcomponents.js custom element registry
 
 const RootApp = () => (
     <PersistQueryClientProvider

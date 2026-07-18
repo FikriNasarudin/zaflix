@@ -78,10 +78,6 @@ html {
 .skinHeader.semiTransparent {
     background-color: var(--jf-palette-AppBar-transparentBg, $appBar-transparentBg);
     backdrop-filter: none !important;
-
-    .layout-tv & {
-        background: none;
-    }
 }
 
 .pageTitleWithDefaultLogo {
@@ -93,10 +89,6 @@ html {
             /* stylelint-disable-next-line @stylistic/function-whitespace-after */
             else: url(@jellyfin/ux-web/banner-dark.png);
         );
-
-    .layout-tv & {
-        background-image: url(@jellyfin/ux-web/icon-transparent.png);
-    }
 }
 
 .backgroundContainer,
@@ -205,10 +197,6 @@ a[data-role="button"],
 .itemDetailImage,
 .cardOverlayContainer {
     border-radius: var(--jf-card-borderRadius, $card-borderRadius);
-}
-
-.layout-tv .formDialogFooter:not(.formDialogFooter-clear) {
-    background-color: transparent;
 }
 
 .cardText-secondary,
@@ -506,8 +494,7 @@ a[data-role="button"],
     background-color: #3b3b3b;
 }
 
-.layout-desktop ::-webkit-scrollbar,
-.layout-tv ::-webkit-scrollbar {
+.layout-desktop ::-webkit-scrollbar {
     width: 0.4em;
     height: 0.4em;
 }

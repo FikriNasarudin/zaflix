@@ -25,8 +25,4 @@
 /* Detail ribbon on item details pages */
 .detailRibbon {
     background: rgba(var(--jf-palette-background-paperChannel, 32 32 32) / 0.8);
-
-    .layout-tv & {
-        background: none;
-    }
 }

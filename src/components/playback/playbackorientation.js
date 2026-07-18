@@ -26,6 +26,20 @@ function shouldAutoOrientate() {
 }
 
 function requestFullscreenAndOrientation() {
+    // On Capacitor Android, use native plugins for reliable orientation locking
+    if (window.Capacitor?.isNativePlatform()) {
+        if (window.Capacitor.Plugins?.ScreenOrientation) {
+            window.Capacitor.Plugins.ScreenOrientation.lock({ orientation: 'landscape' })
+                .then(() => { orientationLocked = true; })
+                .catch(err => { orientationLocked = false; console.error('Capacitor orientation lock failed:', err); });
+        }
+        if (window.Capacitor.Plugins?.StatusBar && window.appMode !== 'android-tv') {
+            window.Capacitor.Plugins.StatusBar.hide();
+        }
+        return;
+    }
+
+    // Web fallback: request fullscreen
     const el = document.documentElement;
     const fsFn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
     if (fsFn && !document.fullscreenElement) {
@@ -36,7 +50,7 @@ function requestFullscreenAndOrientation() {
         }
     }
 
-    // Call orientation.lock directly on its object to avoid context issues
+    // Web fallback: orientation.lock
     const screenOrientation = window.screen.orientation || window.screen.mozOrientation || window.screen.msOrientation;
     if (screenOrientation?.lock) {
         try {
@@ -69,7 +83,21 @@ function requestFullscreenAndOrientation() {
 }
 
 function exitFullscreenAndOrientation() {
-    // Exit fullscreen
+    // On Capacitor Android, use native plugins to unlock orientation and restore status bar
+    if (window.Capacitor?.isNativePlatform()) {
+        if (orientationLocked && window.Capacitor.Plugins?.ScreenOrientation) {
+            window.Capacitor.Plugins.ScreenOrientation.unlock().catch(err => {
+                console.error('Capacitor orientation unlock failed:', err);
+            });
+        }
+        if (window.Capacitor.Plugins?.StatusBar) {
+            window.Capacitor.Plugins.StatusBar.show();
+        }
+        orientationLocked = false;
+        return;
+    }
+
+    // Web fallback: exit fullscreen
     if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
         const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
         if (exitFn) {
@@ -81,7 +109,7 @@ function exitFullscreenAndOrientation() {
         }
     }
 
-    // Unlock orientation
+    // Web fallback: unlock orientation
     if (orientationLocked) {
         const screenOrientation = window.screen.orientation || window.screen.mozOrientation || window.screen.msOrientation;
         if (screenOrientation?.unlock) {

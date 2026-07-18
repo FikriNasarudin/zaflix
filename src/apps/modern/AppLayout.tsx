@@ -16,13 +16,17 @@ import AppDrawer, { isDrawerPath } from './components/drawers/AppDrawer';
 import LibraryToolbar from './features/libraries/components/LibraryToolbar';
 import { LibraryProvider } from './features/libraries/hooks/useLibrary';
 import { isLibraryPath } from './features/libraries/utils/path';
+import { useScrollToTop } from './hooks/useScrollToTop';
 
 import './AppOverrides.scss';
+import './styles/modern.styles.css';
 
 export const Component = () => {
     const [ isDrawerActive, setIsDrawerActive ] = useState(false);
     const { user } = useApi();
     const location = useLocation();
+
+    useScrollToTop();
 
     const isMediumScreen = useMediaQuery((t: Theme) => t.breakpoints.up('md'));
     const isDrawerAvailable = isDrawerPath(location.pathname) && Boolean(user) && !isMediumScreen;
@@ -77,7 +81,9 @@ export const Component = () => {
                     }}
                 >
                     <AppBody>
-                        <Outlet />
+                        <div className='zaflix-page-transition' key={location.pathname}>
+                            <Outlet />
+                        </div>
                     </AppBody>
                 </Box>
                 <BottomNav />

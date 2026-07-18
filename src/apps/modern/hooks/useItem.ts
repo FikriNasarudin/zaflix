@@ -11,7 +11,7 @@ export const useItem = (itemId: string | undefined) => {
             if (!apiClient || !itemId) return null;
             const result = await apiClient.getJSON(
                 apiClient.getUrl('Users/' + user?.Id + '/Items/' + itemId, {
-                    Fields: 'Overview,CommunityRating,ProductionYear,RunTimeTicks,Genres,Studios,People,OfficialRating,UserData,ImageTags,MediaSources'
+                    Fields: 'Overview,CommunityRating,ProductionYear,RunTimeTicks,Genres,Studios,People,OfficialRating,UserData,ImageTags,MediaSources,CollectionIds'
                 })
             );
             return result as any;

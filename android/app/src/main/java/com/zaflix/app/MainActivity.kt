@@ -3,10 +3,9 @@ package com.zaflix.app
 import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
-import android.webkit.WebView
 import com.getcapacitor.BridgeActivity
 
-class NativeShellBridge(private val activity: MainActivity) {
+class AppHostBridge(private val activity: MainActivity) {
 
     @JavascriptInterface
     fun init(): String {
@@ -26,9 +25,7 @@ class NativeShellBridge(private val activity: MainActivity) {
     }
 
     @JavascriptInterface
-    fun deviceName(): String {
-        return activity.deviceName
-    }
+    fun deviceName(): String = activity.deviceName
 
     @JavascriptInterface
     fun appName(): String = "Zaflix"
@@ -38,15 +35,11 @@ class NativeShellBridge(private val activity: MainActivity) {
         return try {
             val pkg = activity.packageManager.getPackageInfo(activity.packageName, 0)
             pkg.versionName ?: "1.0"
-        } catch (_: Exception) {
-            "1.0"
-        }
+        } catch (_: Exception) { "1.0" }
     }
 
     @JavascriptInterface
-    fun exit() {
-        activity.finishAndRemoveTask()
-    }
+    fun exit() { activity.finishAndRemoveTask() }
 
     @JavascriptInterface
     fun supports(command: String): Boolean {
@@ -111,6 +104,15 @@ class NativeShellBridge(private val activity: MainActivity) {
   ]
 }"""
     }
+}
+
+class NativeShellBridge(private val activity: MainActivity) {
+
+    @JavascriptInterface
+    fun getPlugins(): String = "[]"
+
+    @JavascriptInterface
+    fun selectServer() { }
 
     @JavascriptInterface
     fun screen(): String {
@@ -138,6 +140,10 @@ class MainActivity : BridgeActivity() {
         bridge.webView.addJavascriptInterface(
             NativeShellBridge(this),
             "NativeShell"
+        )
+        bridge.webView.addJavascriptInterface(
+            AppHostBridge(this),
+            "NativeShell.AppHost"
         )
 
         registerPlugin(ZaflixPlayerPlugin::class.java)

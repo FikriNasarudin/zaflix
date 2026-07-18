@@ -323,7 +323,7 @@ export const detectBrowser = (userAgent = navigator.userAgent) => {
         browser.orsay = normalizedUA.includes('smarthub');
     }
 
-    if (browser.mobile || browser.tv) {
+    if (browser.mobile) {
         browser.slow = true;
     }
 

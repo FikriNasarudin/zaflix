@@ -8,8 +8,7 @@
     scroll-behavior: smooth;
 }
 
-.hiddenScrollX,
-.layout-tv .scrollX {
+.hiddenScrollX {
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
@@ -18,8 +17,7 @@
     overflow: -moz-scrollbars-none;
 }
 
-.hiddenScrollX::-webkit-scrollbar,
-.layout-tv .scrollX::-webkit-scrollbar {
+.hiddenScrollX::-webkit-scrollbar {
     height: 0 !important;
     display: none;
 }
@@ -35,8 +33,7 @@
     scroll-behavior: smooth;
 }
 
-.hiddenScrollY,
-.layout-tv .smoothScrollY {
+.hiddenScrollY {
     -ms-overflow-style: none;
     scrollbar-width: none;
 
@@ -49,9 +46,7 @@
     overflow: -moz-scrollbars-none;
 }
 
-.hiddenScrollY::-webkit-scrollbar,
-.layout-tv .smoothScrollY::-webkit-scrollbar,
-.layout-tv .scrollY::-webkit-scrollbar {
+.hiddenScrollY::-webkit-scrollbar {
     width: 0 !important;
     display: none;
 }

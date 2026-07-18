@@ -12,7 +12,7 @@ function enableAnimation() {
 }
 
 function enableRotation() {
-    return !browser.tv;
+    return true;
 }
 
 class Backdrop {

@@ -138,10 +138,7 @@ build: ${__JF_BUILD_VERSION__}`);
 }
 
 function loadFonts() {
-    if (browser.tv) {
-        console.debug('using system fonts with explicit sizes');
-        import('./styles/fonts.sized.scss');
-    } else if (__USE_SYSTEM_FONTS__) {
+    if (__USE_SYSTEM_FONTS__) {
         console.debug('using system fonts');
         import('./styles/fonts.scss');
     } else {
@@ -166,7 +163,7 @@ async function loadPlugins() {
     }
 
     // add any native plugins
-    if (window.NativeShell) {
+    if (window.NativeShell?.getPlugins) {
         list = list.concat(window.NativeShell.getPlugins());
     }
 
@@ -181,7 +178,7 @@ async function loadPlugins() {
 }
 
 function loadPlatformFeatures() {
-    if (!browser.tv && !browser.xboxOne && !browser.ps4) {
+    if (!browser.xboxOne && !browser.ps4) {
         import('./components/nowPlayingBar/nowPlayingBar');
     }
 
@@ -194,7 +191,7 @@ function loadPlatformFeatures() {
         import('./components/playback/volumeosd');
     }
 
-    if (!browser.tv && !browser.xboxOne) {
+    if (!browser.xboxOne) {
         import('./components/playback/playbackorientation');
         registerServiceWorker();
 
@@ -231,6 +228,16 @@ async function renderApp() {
     if (window.Capacitor?.Plugins?.SplashScreen) {
         window.Capacitor.Plugins.SplashScreen.hide();
     }
+
+    // Hide status bar on mobile Android
+    if (window.appMode === 'android' && !window.appModeTv && window.Capacitor?.Plugins?.StatusBar) {
+        window.Capacitor.Plugins.StatusBar.hide();
+    }
 }
 
-init();
+init().catch(err => {
+    console.error('[Zaflix] init failed:', err);
+    if (window.Capacitor?.Plugins?.SplashScreen) {
+        window.Capacitor.Plugins.SplashScreen.hide();
+    }
+});

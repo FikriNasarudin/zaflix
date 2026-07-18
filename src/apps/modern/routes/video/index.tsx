@@ -11,6 +11,7 @@ import Events, { type Event } from 'utils/events';
 import Typography from '@mui/material/Typography';
 
 import EndScreen from '../../components/VideoPlayer/EndScreen';
+import VideoGestures from '../../components/VideoPlayer/VideoGestures';
 import { ZAFlix } from '../../styles/theme';
 
 const SHORTCUT_HINTS = [
@@ -163,6 +164,8 @@ const VideoPage: FC = () => {
                 isNowPlayingBarEnabled={false}
                 isThemeMediaSupported
             />
+
+            <VideoGestures />
 
             <EndScreen />
         </>

@@ -192,14 +192,12 @@
     @include conditional-max(padding-right, 7.3%, env(safe-area-inset-right));
 }
 
-.layout-desktop .playlistSectionButton,
-.layout-tv .playlistSectionButton {
+.layout-desktop .playlistSectionButton {
     background: none;
     color: inherit;
 }
 
-.layout-desktop .nowPlayingPlaylist,
-.layout-tv .nowPlayingPlaylist {
+.layout-desktop .nowPlayingPlaylist {
     background: none;
 }
 
@@ -228,18 +226,15 @@
     display: none;
 }
 
-.layout-desktop .nowPlayingInfoButtons .btnRepeat,
-.layout-tv .nowPlayingInfoButtons .btnRepeat {
+.layout-desktop .nowPlayingInfoButtons .btnRepeat {
     display: none;
 }
 
-.layout-desktop .nowPlayingInfoButtons .btnShuffleQueue,
-.layout-tv .nowPlayingInfoButtons .btnShuffleQueue {
+.layout-desktop .nowPlayingInfoButtons .btnShuffleQueue {
     display: none;
 }
 
-.layout-desktop .playlistSectionButton .volumecontrol,
-.layout-tv .playlistSectionButton .volumecontrol {
+.layout-desktop .playlistSectionButton .volumecontrol {
     display: none;
 }
 

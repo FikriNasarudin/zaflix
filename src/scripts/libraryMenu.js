@@ -159,9 +159,7 @@ function updateUserInHeader(user) {
             headerSearchButton.classList.remove('hide');
         }
 
-        if (!layoutManager.tv) {
-            headerCastButton.classList.remove('hide');
-        }
+        headerCastButton.classList.remove('hide');
 
         const policy = user.Policy ? user.Policy : user.localUser.Policy;
 
@@ -199,14 +197,7 @@ function updateHeaderUserButton(src) {
 }
 
 function updateClock() {
-    if (layoutManager.tv) {
-        currentTimeText.classList.remove('hide');
-        setInterval(function() {
-            currentTimeText.innerText = datetime.getDisplayTime(new Date());
-        }, 1000);
-    } else {
-        currentTimeText.classList.add('hide');
-    }
+    currentTimeText.classList.add('hide');
 }
 
 function showSearch() {
@@ -674,9 +665,7 @@ function loadNavDrawer() {
         import('../lib/navdrawer/navdrawer').then(({ default: NavDrawer }) => {
             navDrawerInstance = new NavDrawer(getNavDrawerOptions());
 
-            if (!layoutManager.tv) {
-                navDrawerElement.classList.remove('hide');
-            }
+            navDrawerElement.classList.remove('hide');
 
             resolve(navDrawerInstance);
         });
@@ -700,7 +689,7 @@ let headerAudioPlayerButton;
 let headerSyncButton;
 let currentTimeText;
 const enableLibraryNavDrawer = layoutManager.desktop;
-const enableLibraryNavDrawerHome = !layoutManager.tv;
+const enableLibraryNavDrawerHome = true;
 const skinHeader = document.querySelector('.skinHeader');
 let requiresUserRefresh = true;
 

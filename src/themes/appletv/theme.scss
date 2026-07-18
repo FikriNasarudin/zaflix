@@ -72,12 +72,6 @@ $header-gradient: linear-gradient(to right, #bcbcbc, #a7b4b7, #beb5a5, #adbec2, 
     background: $header-gradient;
 }
 
-.layout-tv .formDialogFooter:not(.formDialogFooter-clear) {
-    border: none;
-    color: initial;
-    background: none;
-}
-
 /* Backdrop uses a gradient overlay rather than simple opacity */
 .backgroundContainer.withBackdrop {
     background: linear-gradient(to bottom, rgba(192, 212, 222, 0.94), rgba(235, 250, 254, 0.94), rgba(227, 220, 212, 0.94), rgba(206, 214, 216, 0.94), rgba(192, 211, 218, 0.94));
@@ -110,10 +104,6 @@ $header-gradient: linear-gradient(to right, #bcbcbc, #a7b4b7, #beb5a5, #adbec2, 
 .detailRibbon {
     background: $header-background;
     background: $header-gradient;
-
-    .layout-tv & {
-        background: none;
-    }
 }
 
 /* Inner card footer spacing and rounding */

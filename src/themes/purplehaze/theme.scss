@@ -26,16 +26,8 @@ html {
     background-color: rgba(0, 0, 0, 0.3);
 }
 
-.layout-tv .skinHeader.semiTransparent {
-    background: none;
-}
-
 .pageTitleWithDefaultLogo {
     background-image: url(@jellyfin/ux-web/banner-light.png);
-}
-
-.layout-tv .pageTitleWithDefaultLogo {
-    background-image: url(@jellyfin/ux-web/icon-transparent.png);
 }
 
 .dialog,
@@ -221,11 +213,6 @@ a[data-role="button"] {
     border-radius: 0.8em;
 }
 
-.layout-tv .formDialogFooter:not(.formDialogFooter-clear) {
-    background-color: transparent;
-    border-radius: 0;
-}
-
 .cardOverlayContainer {
     border-radius: 0.8em;
 }
@@ -320,10 +307,6 @@ a[data-role="button"] {
 .detailRibbon {
     background: #000420;
     background: linear-gradient(to right, #000420 0%, #06256f 18%, #2b052b 38%, #2b052b 68%, #06256f 81%, #000420 100%);
-}
-
-.layout-tv .detailRibbon {
-    background: none;
 }
 
 .noBackdropTransparency .detailPagePrimaryContainer,
@@ -606,8 +589,7 @@ a[data-role="button"] {
     background-color: rgba(59, 59, 59, 0.5);
 }
 
-.layout-desktop ::-webkit-scrollbar,
-.layout-tv ::-webkit-scrollbar {
+.layout-desktop ::-webkit-scrollbar {
     width: 0.4em;
     height: 1em;
 }

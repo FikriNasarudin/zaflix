@@ -5,6 +5,7 @@ import Events from 'utils/events';
 
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 import { useCarouselDrag } from '../../hooks/useCarouselDrag';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -25,6 +26,7 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverrid
     const items = itemsOverride ?? internal.data ?? [];
     const isPending = itemsOverride ? false : internal.isPending;
     const [isHovered, setIsHovered] = useState(false);
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
     const { containerRef, isDragging, dragHandlers, globalListeners } = useCarouselDrag();
 
     const scroll = (direction: 'left' | 'right') => {
@@ -157,6 +159,11 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverrid
                             Events.trigger(document, 'open-zaflix-details', [item]);
                         };
 
+                        const isCardHovered = !isMobile && hoveredId === item.Id;
+                        const matchPercent = item.CommunityRating
+                            ? Math.min(Math.round(item.CommunityRating * 10), 99)
+                            : null;
+
                         return (
                             <div
                                 key={item.Id}
@@ -171,14 +178,13 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverrid
                                     alignItems: 'center',
                                     width: isTop10 ? `calc(${cardWidth} + 45px)` : cardWidth,
                                     cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
+                                    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                                    position: 'relative',
+                                    zIndex: isCardHovered ? 10 : 1,
+                                    ...(isCardHovered ? { transform: 'scale(1.15)', transformOrigin: 'center bottom' } : {})
                                 }}
-                                onMouseEnter={(e) => {
-                                    if (!isMobile) e.currentTarget.style.transform = 'scale(1.05)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!isMobile) e.currentTarget.style.transform = 'scale(1)';
-                                }}
+                                onMouseEnter={() => !isMobile && setHoveredId(item.Id)}
+                                onMouseLeave={() => !isMobile && setHoveredId(null)}
                             >
                                 {isTop10 && (
                                     <div style={{
@@ -245,7 +251,90 @@ const MediaRow: React.FC<MediaRowProps> = ({ title, query, isTop10, itemsOverrid
                                             }} />
                                         </div>
                                     )}
+                                    {/* Episode info overlay for resume items */}
+                                    {item.Type === 'Episode' && item.UserData?.PlayedPercentage > 0 && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '6px',
+                                            left: '6px',
+                                            right: '6px',
+                                            zIndex: 4,
+                                            fontSize: '0.6rem',
+                                            fontWeight: 600,
+                                            color: ZAFlix.colors.textSecondary,
+                                            textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {item.SeriesName && <span style={{ color: ZAFlix.colors.textPrimary }}>{item.SeriesName}</span>}
+                                            {item.Name && <span> · {item.Name}</span>}
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Hover metadata overlay (desktop only) */}
+                                {isCardHovered && !isMobile && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 0,
+                                        left: 0,
+                                        right: 0,
+                                        padding: '30px 8px 8px',
+                                        background: 'linear-gradient(to top, rgba(10, 6, 20, 0.95) 0%, rgba(10, 6, 20, 0.7) 60%, transparent 100%)',
+                                        zIndex: 5,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '4px'
+                                    }}>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}>
+                                            <div style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '50%',
+                                                background: ZAFlix.gradients.accent,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0
+                                            }}>
+                                                <PlayArrowIcon style={{ fontSize: '0.8rem', color: '#fff' }} />
+                                            </div>
+                                            {matchPercent !== null && (
+                                                <span style={{
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 700,
+                                                    color: ZAFlix.colors.cyan
+                                                }}>
+                                                    {matchPercent}% Match
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            color: ZAFlix.colors.textPrimary,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            lineHeight: '1.3'
+                                        }}>
+                                            {item.Name}
+                                        </div>
+                                        {item.ProductionYear && (
+                                            <div style={{
+                                                fontSize: '0.6rem',
+                                                color: ZAFlix.colors.textSecondary
+                                            }}>
+                                                {item.ProductionYear}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}

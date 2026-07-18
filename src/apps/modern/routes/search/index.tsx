@@ -1,15 +1,38 @@
 import { BaseItemKind } from '@jellyfin/sdk/lib/generated-client/models/base-item-kind';
 import type { SearchHint } from '@jellyfin/sdk/lib/generated-client/models/search-hint';
-import React, { type FC, useEffect, useMemo, useRef, useState } from 'react';
+import React, { type FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useApi } from 'hooks/useApi';
 
 import DetailsModal from '../../components/DetailsModal/DetailsModal';
+import EmptyState from '../../components/EmptyState/EmptyState';
 import { useItem } from '../../hooks/useItem';
 import { useSearch } from '../../hooks/useSearch';
 import { ZAFlix } from '../../styles/theme';
 import '../../styles/modern.styles.css';
+
+const RECENT_SEARCHES_KEY = 'zaflix_recent_searches';
+const MAX_RECENT = 8;
+
+function getRecentSearches(): string[] {
+    try {
+        return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function saveRecentSearch(query: string) {
+    if (!query.trim()) return;
+    const recent = getRecentSearches().filter(r => r !== query);
+    recent.unshift(query);
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+}
+
+function clearRecentSearches() {
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
+}
 
 const GROUP_LABELS: Record<string, string> = {
     [BaseItemKind.Movie]: 'Movies',
@@ -147,6 +170,8 @@ const SearchPage: FC = () => {
     const [selectedSearchItemId, setSelectedSearchItemId] = useState<string | null>(null);
     const { data: selectedFullItem } = useItem(selectedSearchItemId || undefined);
     const inputRef = useRef<HTMLInputElement>(null);
+    const [recentSearches, setRecentSearches] = useState<string[]>(getRecentSearches);
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
     const { data: results, isLoading } = useSearch(debouncedQuery);
 
@@ -155,7 +180,7 @@ const SearchPage: FC = () => {
     }, []);
 
     useEffect(() => {
-        const timer = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+        const timer = setTimeout(() => setDebouncedQuery(query.trim()), 200);
         return () => clearTimeout(timer);
     }, [query]);
 
@@ -176,6 +201,8 @@ const SearchPage: FC = () => {
     };
 
     const handleSelect = (hint: SearchHint) => {
+        if (debouncedQuery) saveRecentSearch(debouncedQuery);
+        setRecentSearches(getRecentSearches());
         setSelectedSearchItemId(hint.Id || null);
     };
 
@@ -184,6 +211,29 @@ const SearchPage: FC = () => {
             if (query) { setQuery(''); return; }
             navigate(-1);
         }
+        // Keyboard navigation for recent searches
+        if (!query && recentSearches.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setHighlightedIndex(prev => Math.min(prev + 1, recentSearches.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setHighlightedIndex(prev => Math.max(prev - 1, -1));
+            } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+                e.preventDefault();
+                setQuery(recentSearches[highlightedIndex]);
+            }
+        }
+    };
+
+    const handleRecentClick = (term: string) => {
+        setQuery(term);
+        inputRef.current?.focus();
+    };
+
+    const handleClearRecent = () => {
+        clearRecentSearches();
+        setRecentSearches([]);
     };
 
     return (
@@ -266,27 +316,82 @@ const SearchPage: FC = () => {
                 </div>
 
                 {!debouncedQuery && (
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '80px 20px',
-                        color: ZAFlix.colors.textSecondary
-                    }}>
+                    <div style={{ padding: '20px 0' }}>
+                        {recentSearches.length > 0 && (
+                            <div style={{ marginBottom: 32 }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 12
+                                }}>
+                                    <h3 style={{
+                                        color: ZAFlix.colors.textSecondary,
+                                        fontSize: 14,
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 1,
+                                        margin: 0
+                                    }}>Recent Searches</h3>
+                                    <button
+                                        onClick={handleClearRecent}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: ZAFlix.colors.accent,
+                                            cursor: 'pointer',
+                                            fontSize: 12,
+                                            fontWeight: 500,
+                                            padding: '4px 8px'
+                                        }}
+                                    >Clear</button>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {recentSearches.map((term, idx) => (
+                                        <button
+                                            key={term}
+                                            onClick={() => handleRecentClick(term)}
+                                            style={{
+                                                padding: '8px 16px',
+                                                background: highlightedIndex === idx ? 'rgba(194, 109, 240, 0.2)' : 'rgba(20, 13, 39, 0.5)',
+                                                border: `1px solid ${highlightedIndex === idx ? ZAFlix.colors.accent : ZAFlix.colors.border}`,
+                                                borderRadius: 20,
+                                                color: ZAFlix.colors.textPrimary,
+                                                cursor: 'pointer',
+                                                fontSize: 13,
+                                                fontWeight: 500,
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {term}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div style={{
-                            width: 64, height: 64,
-                            borderRadius: '50%',
-                            background: ZAFlix.gradients.accentSoft,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            margin: '0 auto 20px',
-                            fontSize: 28
-                        }}>🎬</div>
-                        <h2 style={{
-                            color: ZAFlix.colors.textPrimary,
-                            fontSize: 24,
-                            fontWeight: 600,
-                            fontFamily: ZAFlix.fonts.heading,
-                            margin: '0 0 8px'
-                        }}>Find something to watch</h2>
-                        <p style={{ margin: 0, fontSize: 15 }}>Start typing to search across your media library</p>
+                            textAlign: 'center',
+                            padding: '40px 20px',
+                            color: ZAFlix.colors.textSecondary
+                        }}>
+                            <div style={{
+                                width: 64, height: 64,
+                                borderRadius: '50%',
+                                background: ZAFlix.gradients.accentSoft,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 20px',
+                                fontSize: 28
+                            }}>🎬</div>
+                            <h2 style={{
+                                color: ZAFlix.colors.textPrimary,
+                                fontSize: 24,
+                                fontWeight: 600,
+                                fontFamily: ZAFlix.fonts.heading,
+                                margin: '0 0 8px'
+                            }}>Find something to watch</h2>
+                            <p style={{ margin: 0, fontSize: 15 }}>Start typing to search across your media library</p>
+                        </div>
                     </div>
                 )}
 
@@ -304,28 +409,16 @@ const SearchPage: FC = () => {
                 )}
 
                 {debouncedQuery && !isLoading && groups.length === 0 && (
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '80px 20px',
-                        color: ZAFlix.colors.textSecondary
-                    }}>
-                        <div style={{
-                            width: 64, height: 64,
-                            borderRadius: '50%',
-                            background: ZAFlix.gradients.accentSoft,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            margin: '0 auto 20px',
-                            fontSize: 28
-                        }}>🔍</div>
-                        <h2 style={{
-                            color: ZAFlix.colors.textPrimary,
-                            fontSize: 24,
-                            fontWeight: 600,
-                            fontFamily: ZAFlix.fonts.heading,
-                            margin: '0 0 8px'
-                        }}>No results found</h2>
-                        <p style={{ margin: 0, fontSize: 15 }}>Try a different search term</p>
-                    </div>
+                    <EmptyState
+                        icon='🔍'
+                        title='No results found'
+                        message={`No matches for "${debouncedQuery}". Try a different search term or browse our collections.`}
+                        suggestions={[
+                            { label: 'Browse Movies', path: '/movies' },
+                            { label: 'Browse TV Shows', path: '/tv' },
+                            { label: 'Go Home', path: '/home' }
+                        ]}
+                    />
                 )}
 
                 {debouncedQuery && !isLoading && groups.length > 0 && (

@@ -51,6 +51,10 @@ class LayoutManager {
     }
 
     getSavedLayout() {
+        // On Capacitor Android, always use modern layout regardless of saved settings
+        if (window.appMode === 'android') {
+            return undefined;
+        }
         const saved = appSettings.get(SETTING_KEY);
         // Validate that the saved layout is a supported layout mode
         if (saved && Object.values(LayoutMode).includes(saved)) {
@@ -59,6 +63,12 @@ class LayoutManager {
     }
 
     autoLayout() {
+        // On Capacitor Android, always use modern layout for both mobile and TV
+        if (window.appMode === 'android') {
+            this.setLayout(LayoutMode.Modern, false);
+            return;
+        }
+
         // Take a guess at initial layout. The consuming app can override.
         // NOTE: The fallback to TV mode seems like an outdated choice. TVs should be detected properly or override the
         // default layout.

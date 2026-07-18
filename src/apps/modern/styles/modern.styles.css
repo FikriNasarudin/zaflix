@@ -41,6 +41,17 @@
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
+
+    @keyframes pageTransitionIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+}
+
+/* --- Page Content Transition --- */
+
+.zaflix-page-transition {
+    animation: pageTransitionIn 0.3s ease forwards;
 }
 
 /* --- Utility Classes --- */
@@ -346,4 +357,26 @@
     .videoOsdBottom {
         padding-top: 2.8em !important;
     }
+}
+
+/* --- Responsive Typography --- */
+
+@media (max-width: 600px) {
+    html { font-size: 14px; }
+}
+
+@media (min-width: 601px) and (max-width: 1024px) {
+    html { font-size: 15px; }
+}
+
+@media (min-width: 1025px) {
+    html { font-size: 16px; }
+}
+
+/* --- Video Gesture Ripple --- */
+
+@keyframes gestureRipple {
+    0% { transform: translateY(-50%) scale(0.5); opacity: 0; }
+    30% { transform: translateY(-50%) scale(1); opacity: 1; }
+    100% { transform: translateY(-50%) scale(1.2); opacity: 0; }
 }

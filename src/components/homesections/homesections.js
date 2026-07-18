@@ -22,7 +22,6 @@ import 'elements/emby-button/emby-button';
 import './homesections.scss';
 
 const MAX_SECTIONS = 10;
-const MAX_SECTIONS_TV = MAX_SECTIONS + 1; // TV layout can have an extra section to ensure a library section is always visible
 
 export function getDefaultSection(index) {
     if (index < 0 || index > DEFAULT_SECTIONS.length) return '';
@@ -40,18 +39,6 @@ function getAllSectionsToShow(userSettings) {
         sections.push(section);
     }
 
-    // Ensure libraries are visible in TV layout
-    if (
-        layoutManager.tv
-            && !sections.includes(HomeSectionType.SmallLibraryTiles)
-            && !sections.includes(HomeSectionType.LibraryButtons)
-    ) {
-        return [
-            HomeSectionType.SmallLibraryTiles,
-            ...sections
-        ];
-    }
-
     return sections;
 }
 
@@ -66,7 +53,7 @@ export function loadSections(elem, apiClient, user, userSettings) {
 
             if (userViews.length) {
                 // TV layout can have an extra section to ensure libraries are visible
-                const totalSectionCount = layoutManager.tv ? MAX_SECTIONS_TV : MAX_SECTIONS;
+                const totalSectionCount = MAX_SECTIONS;
                 for (let i = 0; i < totalSectionCount; i++) {
                     html += '<div class="verticalSection section' + i + '"></div>';
                 }

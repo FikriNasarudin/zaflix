@@ -1,11 +1,14 @@
 import React from 'react';
 
+import { useGetGenres } from 'hooks/useFetchItems';
+import { useUserViews } from 'hooks/api/useUserViews';
+
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { ZAFlix } from '../../styles/theme';
 
-const GENRES = [
-    'All', 'Action', 'Comedy', 'Drama', 'Thriller',
-    'Science Fiction', 'Horror', 'Anime', 'Documentary',
+const FALLBACK_GENRES = [
+    'Action', 'Comedy', 'Drama', 'Thriller',
+    'Science Fiction', 'Horror', 'Documentary',
     'Romance', 'Adventure', 'Fantasy'
 ];
 
@@ -16,6 +19,12 @@ interface GenreSelectorProps {
 
 const GenreSelector: React.FC<GenreSelectorProps> = ({ selectedGenre, onGenreChange }) => {
     const { isMobile } = useMediaQuery();
+    const { data: views } = useUserViews();
+    const parentId = views?.Items?.find((v: any) => v.CollectionType === 'movies')?.Id
+        || views?.Items?.find((v: any) => v.CollectionType === 'tvshows')?.Id;
+    const { data: genreResult } = useGetGenres(['Movie', 'Series'], parentId);
+    const apiGenres = genreResult?.Items?.map((g: any) => g.Name as string) || [];
+    const genres = ['All', ...(apiGenres.length > 0 ? apiGenres : FALLBACK_GENRES)];
 
     return (
         <div
@@ -30,7 +39,7 @@ const GenreSelector: React.FC<GenreSelectorProps> = ({ selectedGenre, onGenreCha
                 textAlign: 'left'
             }}
         >
-            {GENRES.map((genre) => {
+            {genres.map((genre) => {
                 const isActive = genre === 'All' ? selectedGenre === null : selectedGenre === genre;
                 return (
                     <button

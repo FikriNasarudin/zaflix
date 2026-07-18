@@ -79,8 +79,7 @@ body {
     contain: strict;
 }
 
-.layout-mobile,
-.layout-tv {
+.layout-mobile {
     -webkit-touch-callout: none;
     user-select: none;
 }
@@ -275,8 +274,7 @@ body,
 }
 
 ::-webkit-scrollbar-track,
-.layout-desktop ::-webkit-scrollbar-track,
-.layout-tv ::-webkit-scrollbar-track {
+.layout-desktop ::-webkit-scrollbar-track {
     background: #0a0614 !important;
     box-shadow: none !important;
 }

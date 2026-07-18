@@ -5,12 +5,11 @@
 
 html {
     @media all and (min-height: 720px) {
-        font-size: 20px;
+        font-size: 105%;
     }
 
-    /* This is supposed to be 1080p, but had to reduce the min height to account for possible browser chrome */
     @media all and (min-height: 1000px) {
-        font-size: 27px;
+        font-size: 120%;
     }
 }
 
@@ -23,7 +22,7 @@ h1 {
 }
 
 h2 {
-    @include header-font(1.8em);
+    @include header-font(1.5em);
 }
 
 h3 {
